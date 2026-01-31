@@ -123,7 +123,8 @@ class WorkoutActivity : AppCompatActivity() {
         } else if (dayExtra != null) {
             viewModel.startWorkout(DayOfWeek.valueOf(dayExtra))
         } else {
-            showDaySelectionDialog()
+            // No day provided and no saved session - go back
+            finish()
         }
     }
 
@@ -337,24 +338,6 @@ class WorkoutActivity : AppCompatActivity() {
                 viewModel.setNote(input.text.toString())
             }
             .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showDaySelectionDialog() {
-        val workoutDays = listOf(
-            DayOfWeek.MONDAY,
-            DayOfWeek.WEDNESDAY,
-            DayOfWeek.THURSDAY,
-            DayOfWeek.SATURDAY
-        )
-        val dayNames = workoutDays.map { it.displayName() }.toTypedArray()
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.select_day)
-            .setItems(dayNames) { _, which ->
-                viewModel.startWorkout(workoutDays[which])
-            }
-            .setOnCancelListener { finish() }
             .show()
     }
 

@@ -3,6 +3,8 @@ package com.example.trivialfitnesstracker
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.NumberPicker
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -14,6 +16,7 @@ import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.setup.ExerciseListActivity
 import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,8 +40,51 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<FloatingActionButton>(R.id.startWorkoutFab).setOnClickListener {
-            startActivity(Intent(this, WorkoutActivity::class.java))
+            showDayPickerDialog()
         }
+    }
+
+    private fun showDayPickerDialog() {
+        val dayNames = workoutDays.map { it.displayName() }.toTypedArray()
+        val todayIndex = getTodayWorkoutDayIndex()
+        
+        val picker = NumberPicker(this).apply {
+            minValue = 0
+            maxValue = dayNames.size - 1
+            displayedValues = dayNames
+            value = todayIndex
+            wrapSelectorWheel = true
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.select_day)
+            .setView(picker)
+            .setPositiveButton(R.string.start_workout) { _, _ ->
+                val intent = Intent(this, WorkoutActivity::class.java)
+                intent.putExtra(WorkoutActivity.EXTRA_DAY, workoutDays[picker.value].name)
+                startActivity(intent)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun getTodayWorkoutDayIndex(): Int {
+        val calendar = Calendar.getInstance()
+        val todayCalendarDay = calendar.get(Calendar.DAY_OF_WEEK)
+        
+        val todayDayOfWeek = when (todayCalendarDay) {
+            Calendar.MONDAY -> DayOfWeek.MONDAY
+            Calendar.TUESDAY -> DayOfWeek.TUESDAY
+            Calendar.WEDNESDAY -> DayOfWeek.WEDNESDAY
+            Calendar.THURSDAY -> DayOfWeek.THURSDAY
+            Calendar.FRIDAY -> DayOfWeek.FRIDAY
+            Calendar.SATURDAY -> DayOfWeek.SATURDAY
+            Calendar.SUNDAY -> DayOfWeek.SUNDAY
+            else -> null
+        }
+        
+        val index = workoutDays.indexOf(todayDayOfWeek)
+        return if (index >= 0) index else 0
     }
 
     override fun onResume() {
