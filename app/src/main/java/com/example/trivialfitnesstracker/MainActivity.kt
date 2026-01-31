@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.setup.ExerciseListActivity
+import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
@@ -35,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<FloatingActionButton>(R.id.startWorkoutFab).setOnClickListener {
-            // TODO: Start workout activity
+            startActivity(Intent(this, WorkoutActivity::class.java))
         }
     }
 }

@@ -35,4 +35,7 @@ interface SetLogDao {
 
     @Delete
     suspend fun delete(setLog: SetLog)
+
+    @Query("DELETE FROM set_logs WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

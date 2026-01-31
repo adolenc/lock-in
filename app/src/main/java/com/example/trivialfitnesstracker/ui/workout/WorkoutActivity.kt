@@ -1,0 +1,211 @@
+package com.example.trivialfitnesstracker.ui.workout
+
+import android.graphics.Color
+import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
+import com.example.trivialfitnesstracker.R
+import com.example.trivialfitnesstracker.data.AppDatabase
+import com.example.trivialfitnesstracker.data.WorkoutRepository
+import com.example.trivialfitnesstracker.data.entity.DayOfWeek
+
+class WorkoutActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_DAY = "extra_day"
+    }
+
+    private lateinit var viewModel: WorkoutViewModel
+
+    private lateinit var exerciseName: TextView
+    private lateinit var progressText: TextView
+    private lateinit var historyText: TextView
+    private lateinit var weightInput: EditText
+    private lateinit var todaySetsText: TextView
+    private lateinit var repsDisplay: TextView
+    private lateinit var prevButton: Button
+    private lateinit var nextButton: Button
+    private lateinit var undoButton: Button
+    private lateinit var progressDots: LinearLayout
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_workout)
+
+        // Bind views
+        exerciseName = findViewById(R.id.exerciseName)
+        progressText = findViewById(R.id.progressText)
+        historyText = findViewById(R.id.historyText)
+        weightInput = findViewById(R.id.weightInput)
+        todaySetsText = findViewById(R.id.todaySetsText)
+        repsDisplay = findViewById(R.id.repsDisplay)
+        prevButton = findViewById(R.id.prevExerciseButton)
+        nextButton = findViewById(R.id.nextExerciseButton)
+        undoButton = findViewById(R.id.undoButton)
+        progressDots = findViewById(R.id.progressDots)
+
+        val db = AppDatabase.getDatabase(this)
+        val repository = WorkoutRepository(
+            db.exerciseDao(),
+            db.workoutSessionDao(),
+            db.exerciseLogDao(),
+            db.setLogDao()
+        )
+        viewModel = ViewModelProvider(this, WorkoutViewModelFactory(repository))
+            .get(WorkoutViewModel::class.java)
+
+        setupObservers()
+        setupClickListeners()
+
+        val dayExtra = intent.getStringExtra(EXTRA_DAY)
+        if (dayExtra != null) {
+            viewModel.startWorkout(DayOfWeek.valueOf(dayExtra))
+        } else {
+            showDaySelectionDialog()
+        }
+    }
+
+    private fun setupObservers() {
+        viewModel.currentExercise.observe(this) { exercise ->
+            exerciseName.text = exercise?.name ?: ""
+        }
+
+        viewModel.progress.observe(this) { (current, total) ->
+            progressText.text = getString(R.string.exercise_progress, current, total)
+            prevButton.isEnabled = !viewModel.isFirstExercise()
+            prevButton.alpha = if (viewModel.isFirstExercise()) 0.5f else 1f
+            nextButton.text = if (viewModel.isLastExercise()) 
+                getString(R.string.finish_workout) else getString(R.string.next)
+        }
+
+        viewModel.exerciseStatuses.observe(this) { statuses ->
+            progressDots.removeAllViews()
+            val currentIndex = viewModel.getCurrentIndex()
+            
+            statuses.forEach { status ->
+                val dot = TextView(this).apply {
+                    text = "●"
+                    textSize = 16f
+                    setPadding(8, 0, 8, 0)
+                    
+                    setTextColor(when {
+                        status.index == currentIndex -> Color.parseColor("#2196F3") // blue
+                        status.hasSets -> Color.parseColor("#4CAF50") // green
+                        else -> Color.parseColor("#9E9E9E") // gray
+                    })
+                    
+                    setOnClickListener {
+                        viewModel.goToExercise(status.index)
+                        weightInput.text.clear()
+                    }
+                }
+                progressDots.addView(dot)
+            }
+        }
+
+        viewModel.history.observe(this) { historyList ->
+            if (historyList.isEmpty()) {
+                historyText.text = getString(R.string.no_history)
+            } else {
+                historyText.text = historyList.joinToString("\n") { h ->
+                    val regularSets = h.sets.filter { !it.isDropdown }
+                    val dropdownSets = h.sets.filter { it.isDropdown }
+                    val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "?"
+                    val reps = regularSets.joinToString(", ") { it.reps.toString() }
+                    val dropdown = if (dropdownSets.isNotEmpty()) 
+                        " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
+                    "${h.date}: $weight × $reps$dropdown"
+                }
+            }
+        }
+
+        viewModel.lastWeight.observe(this) { weight ->
+            if (weight != null && weightInput.text.isEmpty()) {
+                weightInput.setText(weight.toInt().toString())
+            }
+        }
+
+        viewModel.todaySets.observe(this) { sets ->
+            if (sets.isEmpty()) {
+                todaySetsText.text = getString(R.string.no_sets_yet)
+            } else {
+                val regularSets = sets.filter { !it.isDropdown }
+                val dropdownSets = sets.filter { it.isDropdown }
+                val reps = regularSets.joinToString(", ") { it.reps.toString() }
+                val dropdown = if (dropdownSets.isNotEmpty())
+                    " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
+                todaySetsText.text = getString(R.string.sets_today, "$reps$dropdown")
+            }
+        }
+
+        viewModel.reps.observe(this) { reps ->
+            repsDisplay.text = reps.toString()
+        }
+
+        viewModel.canUndo.observe(this) { canUndo ->
+            undoButton.isEnabled = canUndo
+            undoButton.alpha = if (canUndo) 1f else 0.5f
+        }
+
+        viewModel.isFinished.observe(this) { finished ->
+            if (finished) finish()
+        }
+    }
+
+    private fun setupClickListeners() {
+        findViewById<Button>(R.id.incrementReps).setOnClickListener {
+            viewModel.incrementReps()
+        }
+
+        findViewById<Button>(R.id.decrementReps).setOnClickListener {
+            viewModel.decrementReps()
+        }
+
+        findViewById<Button>(R.id.logSetButton).setOnClickListener {
+            val weight = weightInput.text.toString().toFloatOrNull() ?: 0f
+            viewModel.logSet(weight)
+        }
+
+        findViewById<Button>(R.id.logDropdownButton).setOnClickListener {
+            viewModel.logDropdown()
+        }
+
+        undoButton.setOnClickListener {
+            viewModel.undoLastSet()
+        }
+
+        prevButton.setOnClickListener {
+            viewModel.previousExercise()
+            weightInput.text.clear()
+        }
+
+        nextButton.setOnClickListener {
+            viewModel.nextExercise()
+            weightInput.text.clear()
+        }
+    }
+
+    private fun showDaySelectionDialog() {
+        val workoutDays = listOf(
+            DayOfWeek.MONDAY,
+            DayOfWeek.WEDNESDAY,
+            DayOfWeek.THURSDAY,
+            DayOfWeek.SATURDAY
+        )
+        val dayNames = workoutDays.map { it.displayName() }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.select_day)
+            .setItems(dayNames) { _, which ->
+                viewModel.startWorkout(workoutDays[which])
+            }
+            .setOnCancelListener { finish() }
+            .show()
+    }
+}

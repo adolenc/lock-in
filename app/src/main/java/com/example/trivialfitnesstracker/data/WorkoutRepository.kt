@@ -50,6 +50,9 @@ class WorkoutRepository(
         return ExerciseLog(id = newId, sessionId = sessionId, exerciseId = exerciseId, completedAt = System.currentTimeMillis())
     }
 
+    suspend fun getExerciseLogForSession(sessionId: Long, exerciseId: Long): ExerciseLog? =
+        exerciseLogDao.getLogForSessionAndExercise(sessionId, exerciseId)
+
     suspend fun getRecentLogsForExercise(exerciseId: Long, limit: Int = 3) =
         exerciseLogDao.getRecentLogsForExercise(exerciseId, limit)
 
@@ -66,4 +69,6 @@ class WorkoutRepository(
     }
 
     suspend fun getSetsForExerciseLog(exerciseLogId: Long) = setLogDao.getSetsForExerciseLog(exerciseLogId)
+
+    suspend fun deleteSetLog(setLogId: Long) = setLogDao.deleteById(setLogId)
 }

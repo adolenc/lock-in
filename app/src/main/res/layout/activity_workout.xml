@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    tools:context=".ui.workout.WorkoutActivity">
+
+    <!-- Exercise name -->
+    <TextView
+        android:id="@+id/exerciseName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        tools:text="Bench Press" />
+
+    <!-- Progress indicator -->
+    <TextView
+        android:id="@+id/progressText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingBottom="8dp"
+        android:textSize="14sp"
+        android:textColor="@android:color/darker_gray"
+        tools:text="Exercise 1 of 5" />
+
+    <!-- History section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="@string/recent_history"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/historyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="12dp"
+        android:textSize="14sp"
+        android:fontFamily="monospace"
+        tools:text="Jan 28: 60kg × 10, 10, 8 + 5\nJan 25: 60kg × 10, 9, 8 + 6" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@android:color/darker_gray" />
+
+    <!-- Today's workout section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:text="@string/todays_workout"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <!-- Weight input -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/weight_label"
+            android:textSize="16sp" />
+
+        <EditText
+            android:id="@+id/weightInput"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:inputType="numberDecimal"
+            android:textSize="18sp"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text="@string/kg"
+            android:textSize="16sp" />
+    </LinearLayout>
+
+    <!-- Today's sets display -->
+    <TextView
+        android:id="@+id/todaySetsText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textSize="16sp"
+        android:fontFamily="monospace"
+        tools:text="Sets: 10, 9" />
+
+    <!-- Reps input and log button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="16dp">
+
+        <Button
+            android:id="@+id/decrementReps"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="−"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/repsDisplay"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            tools:text="10" />
+
+        <Button
+            android:id="@+id/incrementReps"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="+"
+            android:textSize="24sp" />
+
+        <Button
+            android:id="@+id/logSetButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginStart="24dp"
+            android:text="@string/log_set"
+            android:textSize="16sp" />
+    </LinearLayout>
+
+    <!-- Dropdown and Undo buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingTop="8dp">
+
+        <Button
+            android:id="@+id/logDropdownButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/log_dropdown"
+            style="?android:attr/buttonBarButtonStyle" />
+
+        <Button
+            android:id="@+id/undoButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/undo"
+            style="?android:attr/buttonBarButtonStyle" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Progress dots -->
+    <LinearLayout
+        android:id="@+id/progressDots"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:padding="12dp" />
+
+    <!-- Navigation buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <Button
+            android:id="@+id/prevExerciseButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/previous"
+            style="?android:attr/buttonBarButtonStyle" />
+
+        <Button
+            android:id="@+id/nextExerciseButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/next"
+            style="?android:attr/buttonBarButtonStyle" />
+    </LinearLayout>
+
+</LinearLayout>

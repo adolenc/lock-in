@@ -11,4 +11,19 @@
     <string name="delete">Delete</string>
     <string name="no_exercises">No exercises yet. Tap + to add one.</string>
     <string name="edit_exercises">Edit exercises</string>
+    <string name="recent_history">Recent History</string>
+    <string name="todays_workout">Today</string>
+    <string name="weight_label">Weight:</string>
+    <string name="kg">kg</string>
+    <string name="log_set">Log Set</string>
+    <string name="log_dropdown">+ Dropdown</string>
+    <string name="undo">Undo</string>
+    <string name="previous">← Previous</string>
+    <string name="next">Next →</string>
+    <string name="no_history">No previous data</string>
+    <string name="select_day">Select Workout Day</string>
+    <string name="exercise_progress">Exercise %1$d of %2$d</string>
+    <string name="sets_today">Sets: %s</string>
+    <string name="no_sets_yet">No sets logged yet</string>
+    <string name="finish_workout">Finish</string>
 </resources>
