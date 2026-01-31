@@ -30,4 +30,9 @@
     <string name="edit_note">Edit Note</string>
     <string name="note_hint">Add a note for this exercise</string>
     <string name="finish_workout_confirm">Are you sure you want to finish this workout?</string>
+    <string name="rest_timer">Rest</string>
+    <string name="skip">Skip</string>
+    <string name="rest_complete">Rest Complete</string>
+    <string name="time_remaining">Time remaining: %s</string>
+    <string name="rest_timer_done">Time to do your next set!</string>
 </resources>

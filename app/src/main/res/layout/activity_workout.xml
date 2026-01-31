@@ -192,6 +192,56 @@
         android:layout_weight="1"
         android:minHeight="16dp" />
 
+    <!-- Rest Timer -->
+    <LinearLayout
+        android:id="@+id/timerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/rest_timer"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/timerText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="1:45" />
+
+            <Button
+                android:id="@+id/skipTimerButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/skip"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/timerProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginTop="8dp"
+            android:max="100"
+            android:progress="0" />
+
+    </LinearLayout>
+
     <!-- Progress dots -->
     <LinearLayout
         android:id="@+id/progressDots"
