@@ -3,6 +3,8 @@ package com.example.trivialfitnesstracker
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.NumberPicker
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -14,6 +16,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.setup.ExerciseListActivity
+import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
 import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.Calendar
@@ -94,6 +97,21 @@ class MainActivity : AppCompatActivity() {
         val savedSessionId = prefs.getLong("session_id", -1)
         if (savedSessionId != -1L) {
             startActivity(Intent(this, WorkoutActivity::class.java))
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_settings -> {
+                startActivity(Intent(this, SettingsActivity::class.java))
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }

@@ -39,6 +39,11 @@
             android:exported="false"
             android:parentActivityName=".ui.setup.ExerciseListActivity" />
 
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
     </application>
 
 </manifest>

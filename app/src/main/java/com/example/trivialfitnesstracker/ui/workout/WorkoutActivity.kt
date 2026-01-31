@@ -30,6 +30,7 @@ import com.example.trivialfitnesstracker.R
 import com.example.trivialfitnesstracker.data.AppDatabase
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
+import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
 
 class WorkoutActivity : AppCompatActivity() {
 
@@ -41,7 +42,6 @@ class WorkoutActivity : AppCompatActivity() {
         private const val KEY_EXERCISE_INDEX = "exercise_index"
         private const val CHANNEL_ID = "rest_timer"
         private const val NOTIFICATION_ID = 1
-        private const val REST_DURATION_MS = 120_000L // 2 minutes
         private const val PERMISSION_REQUEST_CODE = 100
     }
 
@@ -374,7 +374,9 @@ class WorkoutActivity : AppCompatActivity() {
         timerContainer.visibility = View.VISIBLE
         isTimerRunning = true
 
-        countDownTimer = object : CountDownTimer(REST_DURATION_MS, 1000) {
+        val restDurationMs = SettingsActivity.getRestDurationMs(this)
+        
+        countDownTimer = object : CountDownTimer(restDurationMs, 1000) {
             override fun onTick(millisUntilFinished: Long) {
                 val seconds = ((millisUntilFinished + 999) / 1000).toInt()
                 val minutes = seconds / 60
@@ -382,8 +384,8 @@ class WorkoutActivity : AppCompatActivity() {
                 val timeText = String.format("%d:%02d", minutes, secs)
                 timerText.text = timeText
                 
-                val elapsed = REST_DURATION_MS - millisUntilFinished
-                val progress = (elapsed * 100 / REST_DURATION_MS).toInt()
+                val elapsed = restDurationMs - millisUntilFinished
+                val progress = (elapsed * 100 / restDurationMs).toInt()
                 timerProgress.progress = progress
                 
                 updateTimerNotification(timeText)
