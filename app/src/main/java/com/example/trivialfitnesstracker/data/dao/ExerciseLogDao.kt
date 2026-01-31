@@ -20,6 +20,9 @@ interface ExerciseLogDao {
 
     @Delete
     suspend fun delete(log: ExerciseLog)
+
+    @Query("UPDATE exercise_logs SET note = :note WHERE id = :id")
+    suspend fun updateNote(id: Long, note: String?)
 }
 
 @Dao
@@ -38,4 +41,7 @@ interface SetLogDao {
 
     @Query("DELETE FROM set_logs WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE set_logs SET weight = :weight WHERE exerciseLogId = :exerciseLogId AND isDropdown = 0")
+    suspend fun updateWeight(exerciseLogId: Long, weight: Float)
 }

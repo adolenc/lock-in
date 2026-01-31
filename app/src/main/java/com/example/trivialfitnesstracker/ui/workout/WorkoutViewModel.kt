@@ -11,7 +11,8 @@ import java.util.*
 
 data class ExerciseHistory(
     val date: String,
-    val sets: List<SetLog>
+    val sets: List<SetLog>,
+    val note: String?
 )
 
 data class ExerciseStatus(
@@ -58,6 +59,9 @@ class WorkoutViewModel(
 
     private val _canUndo = MutableLiveData(false)
     val canUndo: LiveData<Boolean> = _canUndo
+
+    private val _currentNote = MutableLiveData<String?>()
+    val currentNote: LiveData<String?> = _currentNote
 
     fun startWorkout(day: DayOfWeek) {
         viewModelScope.launch {
@@ -111,7 +115,8 @@ class WorkoutViewModel(
             val sets = repository.getSetsForExerciseLog(log.id)
             ExerciseHistory(
                 date = dateFormat.format(Date(log.completedAt)),
-                sets = sets
+                sets = sets,
+                note = log.note
             )
         }
         _history.value = historyList
@@ -123,6 +128,10 @@ class WorkoutViewModel(
 
         // Load today's sets
         loadTodaySets(exercise.id)
+        
+        // Load current note
+        val exerciseLog = repository.getExerciseLogForSession(sessionId, exercise.id)
+        _currentNote.value = exerciseLog?.note
         
         // Reset undo state when changing exercises
         lastLoggedSetId = null
@@ -188,6 +197,24 @@ class WorkoutViewModel(
             _canUndo.value = false
             val exercise = _currentExercise.value ?: return@launch
             loadTodaySets(exercise.id)
+        }
+    }
+
+    fun setNote(note: String?) {
+        viewModelScope.launch {
+            val exercise = _currentExercise.value ?: return@launch
+            val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
+            val trimmedNote = note?.trim()?.ifEmpty { null }
+            repository.updateExerciseNote(exerciseLog.id, trimmedNote)
+            _currentNote.value = trimmedNote
+        }
+    }
+
+    fun updateWeight(newWeight: Float) {
+        viewModelScope.launch {
+            val exercise = _currentExercise.value ?: return@launch
+            val exerciseLog = repository.getExerciseLogForSession(sessionId, exercise.id) ?: return@launch
+            repository.updateSetsWeight(exerciseLog.id, newWeight)
         }
     }
 

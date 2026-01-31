@@ -2,13 +2,13 @@ package com.example.trivialfitnesstracker.ui.workout
 
 import android.graphics.Color
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.example.trivialfitnesstracker.R
 import com.example.trivialfitnesstracker.data.AppDatabase
@@ -29,7 +29,6 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var prefs: android.content.SharedPreferences
 
     private lateinit var exerciseName: TextView
-    private lateinit var progressText: TextView
     private lateinit var historyText: TextView
     private lateinit var weightInput: EditText
     private lateinit var todaySetsText: TextView
@@ -38,19 +37,20 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var nextButton: Button
     private lateinit var undoButton: Button
     private lateinit var progressDots: LinearLayout
+    private lateinit var noteText: TextView
+    private lateinit var addNoteButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
 
-        // Remove back button from action bar
-        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+        // Hide action bar for cleaner look
+        supportActionBar?.hide()
 
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         // Bind views
         exerciseName = findViewById(R.id.exerciseName)
-        progressText = findViewById(R.id.progressText)
         historyText = findViewById(R.id.historyText)
         weightInput = findViewById(R.id.weightInput)
         todaySetsText = findViewById(R.id.todaySetsText)
@@ -59,6 +59,8 @@ class WorkoutActivity : AppCompatActivity() {
         nextButton = findViewById(R.id.nextExerciseButton)
         undoButton = findViewById(R.id.undoButton)
         progressDots = findViewById(R.id.progressDots)
+        noteText = findViewById(R.id.noteText)
+        addNoteButton = findViewById(R.id.addNoteButton)
 
         val db = AppDatabase.getDatabase(this)
         val repository = WorkoutRepository(
@@ -112,7 +114,6 @@ class WorkoutActivity : AppCompatActivity() {
         }
 
         viewModel.progress.observe(this) { (current, total) ->
-            progressText.text = getString(R.string.exercise_progress, current, total)
             prevButton.isEnabled = !viewModel.isFirstExercise()
             prevButton.alpha = if (viewModel.isFirstExercise()) 0.5f else 1f
             nextButton.text = if (viewModel.isLastExercise()) 
@@ -160,7 +161,8 @@ class WorkoutActivity : AppCompatActivity() {
                     val reps = regularSets.joinToString(", ") { it.reps.toString() }
                     val dropdown = if (dropdownSets.isNotEmpty()) 
                         " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                    "${h.date}: $weight × $reps$dropdown"
+                    val note = if (!h.note.isNullOrEmpty()) " (${h.note})" else ""
+                    "${h.date}: $weight × $reps$dropdown$note"
                 }
             }
         }
@@ -199,6 +201,17 @@ class WorkoutActivity : AppCompatActivity() {
             undoButton.alpha = if (canUndo) 1f else 0.5f
         }
 
+        viewModel.currentNote.observe(this) { note ->
+            if (note.isNullOrEmpty()) {
+                noteText.visibility = View.GONE
+                addNoteButton.visibility = View.VISIBLE
+            } else {
+                noteText.visibility = View.VISIBLE
+                noteText.text = note
+                addNoteButton.visibility = View.GONE
+            }
+        }
+
         viewModel.isFinished.observe(this) { finished ->
             if (finished) finish()
         }
@@ -226,18 +239,35 @@ class WorkoutActivity : AppCompatActivity() {
             viewModel.undoLastSet()
         }
 
+        addNoteButton.setOnClickListener {
+            showNoteDialog()
+        }
+
+        noteText.setOnClickListener {
+            showNoteDialog()
+        }
+
         prevButton.setOnClickListener {
+            updateWeightIfChanged()
             viewModel.previousExercise()
             weightInput.text.clear()
         }
 
         nextButton.setOnClickListener {
+            updateWeightIfChanged()
             if (viewModel.isLastExercise()) {
                 showFinishConfirmation()
             } else {
                 viewModel.nextExercise()
                 weightInput.text.clear()
             }
+        }
+    }
+
+    private fun updateWeightIfChanged() {
+        val weight = weightInput.text.toString().toFloatOrNull()
+        if (weight != null) {
+            viewModel.updateWeight(weight)
         }
     }
 
@@ -248,6 +278,21 @@ class WorkoutActivity : AppCompatActivity() {
             .setPositiveButton(R.string.finish_workout) { _, _ ->
                 clearWorkoutState()
                 finish()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showNoteDialog() {
+        val input = EditText(this)
+        input.hint = getString(R.string.note_hint)
+        input.setText(viewModel.currentNote.value ?: "")
+
+        AlertDialog.Builder(this)
+            .setTitle(if (viewModel.currentNote.value.isNullOrEmpty()) R.string.add_note else R.string.edit_note)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                viewModel.setNote(input.text.toString())
             }
             .setNegativeButton(R.string.cancel, null)
             .show()

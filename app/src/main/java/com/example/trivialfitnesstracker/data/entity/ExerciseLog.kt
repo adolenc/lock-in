@@ -31,5 +31,6 @@ data class ExerciseLog(
     val id: Long = 0,
     val sessionId: Long,
     val exerciseId: Long,
-    val completedAt: Long // epoch millis
+    val completedAt: Long, // epoch millis
+    val note: String? = null
 )
