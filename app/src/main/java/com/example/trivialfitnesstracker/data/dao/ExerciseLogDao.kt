@@ -12,6 +12,9 @@ interface ExerciseLogDao {
     @Query("SELECT * FROM exercise_logs WHERE exerciseId = :exerciseId ORDER BY completedAt DESC LIMIT :limit")
     suspend fun getRecentLogsForExercise(exerciseId: Long, limit: Int = 3): List<ExerciseLog>
 
+    @Query("SELECT * FROM exercise_logs WHERE exerciseId IN (:exerciseIds) ORDER BY completedAt DESC")
+    suspend fun getAllLogsForExercises(exerciseIds: List<Long>): List<ExerciseLog>
+
     @Query("SELECT * FROM exercise_logs WHERE sessionId = :sessionId AND exerciseId = :exerciseId LIMIT 1")
     suspend fun getLogForSessionAndExercise(sessionId: Long, exerciseId: Long): ExerciseLog?
 

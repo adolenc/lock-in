@@ -16,6 +16,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id")
     suspend fun getById(id: Long): Exercise?
 
+    @Query("SELECT * FROM exercises WHERE name = :name")
+    suspend fun getByName(name: String): List<Exercise>
+
     @Query("SELECT MAX(orderIndex) FROM exercises WHERE dayOfWeek = :day")
     suspend fun getMaxOrderIndex(day: DayOfWeek): Int?
 

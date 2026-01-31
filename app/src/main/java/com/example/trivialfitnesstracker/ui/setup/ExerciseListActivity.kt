@@ -1,6 +1,7 @@
 package com.example.trivialfitnesstracker.ui.setup
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -19,6 +20,7 @@ import com.example.trivialfitnesstracker.data.AppDatabase
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.data.entity.Exercise
+import com.example.trivialfitnesstracker.ui.history.ExerciseHistoryActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class ExerciseListActivity : AppCompatActivity() {
@@ -54,7 +56,8 @@ class ExerciseListActivity : AppCompatActivity() {
 
         adapter = ExerciseAdapter(
             onStartDrag = { holder -> itemTouchHelper.startDrag(holder) },
-            onDelete = { exercise -> showDeleteConfirmation(exercise) }
+            onDelete = { exercise -> showDeleteConfirmation(exercise) },
+            onClick = { exercise -> openExerciseHistory(exercise) }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -103,6 +106,12 @@ class ExerciseListActivity : AppCompatActivity() {
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
+
+    private fun openExerciseHistory(exercise: Exercise) {
+        val intent = Intent(this, ExerciseHistoryActivity::class.java)
+        intent.putExtra(ExerciseHistoryActivity.EXTRA_EXERCISE_NAME, exercise.name)
+        startActivity(intent)
+    }
 }
 
 private class DragCallback(
@@ -129,7 +138,8 @@ private class DragCallback(
 
 private class ExerciseAdapter(
     private val onStartDrag: (RecyclerView.ViewHolder) -> Unit,
-    private val onDelete: (Exercise) -> Unit
+    private val onDelete: (Exercise) -> Unit,
+    private val onClick: (Exercise) -> Unit
 ) : RecyclerView.Adapter<ExerciseAdapter.ExerciseViewHolder>() {
 
     private val exercises: MutableList<Exercise> = mutableListOf()
@@ -165,6 +175,7 @@ private class ExerciseAdapter(
         val exercise = exercises[position]
         holder.name.text = exercise.name
         holder.delete.setOnClickListener { onDelete(exercise) }
+        holder.itemView.setOnClickListener { onClick(exercise) }
         holder.dragHandle.setOnTouchListener { _, event ->
             if (event.actionMasked == MotionEvent.ACTION_DOWN) {
                 onStartDrag(holder)

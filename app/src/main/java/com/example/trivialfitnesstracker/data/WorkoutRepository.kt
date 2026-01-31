@@ -17,6 +17,8 @@ class WorkoutRepository(
     
     suspend fun getExercisesForDaySync(day: DayOfWeek) = exerciseDao.getExercisesForDaySync(day)
 
+    suspend fun getExercisesByName(name: String) = exerciseDao.getByName(name)
+
     suspend fun addExercise(name: String, day: DayOfWeek): Long {
         val maxIndex = exerciseDao.getMaxOrderIndex(day) ?: -1
         return exerciseDao.insert(Exercise(name = name, dayOfWeek = day, orderIndex = maxIndex + 1))
@@ -55,6 +57,9 @@ class WorkoutRepository(
 
     suspend fun getRecentLogsForExercise(exerciseId: Long, limit: Int = 3) =
         exerciseLogDao.getRecentLogsForExercise(exerciseId, limit)
+
+    suspend fun getAllLogsForExercises(exerciseIds: List<Long>) =
+        exerciseLogDao.getAllLogsForExercises(exerciseIds)
 
     suspend fun updateExerciseNote(exerciseLogId: Long, note: String?) =
         exerciseLogDao.updateNote(exerciseLogId, note)
