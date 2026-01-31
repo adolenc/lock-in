@@ -19,9 +19,14 @@ class WorkoutActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_DAY = "extra_day"
+        private const val PREFS_NAME = "workout_state"
+        private const val KEY_SESSION_ID = "session_id"
+        private const val KEY_DAY = "day"
+        private const val KEY_EXERCISE_INDEX = "exercise_index"
     }
 
     private lateinit var viewModel: WorkoutViewModel
+    private lateinit var prefs: android.content.SharedPreferences
 
     private lateinit var exerciseName: TextView
     private lateinit var progressText: TextView
@@ -37,6 +42,11 @@ class WorkoutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
+
+        // Remove back button from action bar
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+
+        prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         // Bind views
         exerciseName = findViewById(R.id.exerciseName)
@@ -63,12 +73,37 @@ class WorkoutActivity : AppCompatActivity() {
         setupObservers()
         setupClickListeners()
 
+        // Check for saved session first
+        val savedSessionId = prefs.getLong(KEY_SESSION_ID, -1)
+        val savedDay = prefs.getString(KEY_DAY, null)
+        val savedIndex = prefs.getInt(KEY_EXERCISE_INDEX, 0)
+
         val dayExtra = intent.getStringExtra(EXTRA_DAY)
-        if (dayExtra != null) {
+        
+        if (savedSessionId != -1L && savedDay != null) {
+            // Resume existing session
+            viewModel.resumeWorkout(DayOfWeek.valueOf(savedDay), savedSessionId, savedIndex)
+        } else if (dayExtra != null) {
             viewModel.startWorkout(DayOfWeek.valueOf(dayExtra))
         } else {
             showDaySelectionDialog()
         }
+    }
+
+    private fun saveWorkoutState(sessionId: Long, day: DayOfWeek, exerciseIndex: Int) {
+        prefs.edit()
+            .putLong(KEY_SESSION_ID, sessionId)
+            .putString(KEY_DAY, day.name)
+            .putInt(KEY_EXERCISE_INDEX, exerciseIndex)
+            .apply()
+    }
+
+    private fun clearWorkoutState() {
+        prefs.edit().clear().apply()
+    }
+
+    override fun onBackPressed() {
+        // Disable back button - must use Finish
     }
 
     private fun setupObservers() {
@@ -82,6 +117,11 @@ class WorkoutActivity : AppCompatActivity() {
             prevButton.alpha = if (viewModel.isFirstExercise()) 0.5f else 1f
             nextButton.text = if (viewModel.isLastExercise()) 
                 getString(R.string.finish_workout) else getString(R.string.next)
+            
+            // Save state whenever exercise changes
+            viewModel.getSessionInfo()?.let { (sessionId, day) ->
+                saveWorkoutState(sessionId, day, viewModel.getCurrentIndex())
+            }
         }
 
         viewModel.exerciseStatuses.observe(this) { statuses ->
@@ -128,6 +168,12 @@ class WorkoutActivity : AppCompatActivity() {
         viewModel.lastWeight.observe(this) { weight ->
             if (weight != null && weightInput.text.isEmpty()) {
                 weightInput.setText(weight.toInt().toString())
+            }
+        }
+
+        viewModel.lastReps.observe(this) { reps ->
+            if (reps != null) {
+                viewModel.setReps(reps)
             }
         }
 
@@ -186,9 +232,25 @@ class WorkoutActivity : AppCompatActivity() {
         }
 
         nextButton.setOnClickListener {
-            viewModel.nextExercise()
-            weightInput.text.clear()
+            if (viewModel.isLastExercise()) {
+                showFinishConfirmation()
+            } else {
+                viewModel.nextExercise()
+                weightInput.text.clear()
+            }
         }
+    }
+
+    private fun showFinishConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.finish_workout)
+            .setMessage(R.string.finish_workout_confirm)
+            .setPositiveButton(R.string.finish_workout) { _, _ ->
+                clearWorkoutState()
+                finish()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showDaySelectionDialog() {

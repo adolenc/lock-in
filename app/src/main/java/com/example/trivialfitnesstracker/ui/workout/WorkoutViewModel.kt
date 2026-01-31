@@ -24,6 +24,7 @@ class WorkoutViewModel(
 ) : ViewModel() {
 
     private var sessionId: Long = 0
+    private var currentDay: DayOfWeek? = null
     private var exercises: List<Exercise> = emptyList()
     private var currentIndex = 0
     private var lastLoggedSetId: Long? = null
@@ -46,6 +47,9 @@ class WorkoutViewModel(
     private val _reps = MutableLiveData(10)
     val reps: LiveData<Int> = _reps
 
+    private val _lastReps = MutableLiveData<Int?>()
+    val lastReps: LiveData<Int?> = _lastReps
+
     private val _lastWeight = MutableLiveData<Float?>()
     val lastWeight: LiveData<Float?> = _lastWeight
 
@@ -63,10 +67,31 @@ class WorkoutViewModel(
                 return@launch
             }
             sessionId = repository.startWorkoutSession(day)
+            currentDay = day
             currentIndex = 0
             loadCurrentExercise()
             updateExerciseStatuses()
         }
+    }
+
+    fun resumeWorkout(day: DayOfWeek, savedSessionId: Long, savedIndex: Int) {
+        viewModelScope.launch {
+            exercises = repository.getExercisesForDaySync(day)
+            if (exercises.isEmpty()) {
+                _isFinished.value = true
+                return@launch
+            }
+            sessionId = savedSessionId
+            currentDay = day
+            currentIndex = savedIndex.coerceIn(0, exercises.size - 1)
+            loadCurrentExercise()
+            updateExerciseStatuses()
+        }
+    }
+
+    fun getSessionInfo(): Pair<Long, DayOfWeek>? {
+        val day = currentDay ?: return null
+        return Pair(sessionId, day)
     }
 
     private suspend fun loadCurrentExercise() {
@@ -91,9 +116,10 @@ class WorkoutViewModel(
         }
         _history.value = historyList
 
-        // Get last weight used
+        // Get last weight and reps used
         val lastSets = historyList.firstOrNull()?.sets?.filter { !it.isDropdown }
         _lastWeight.value = lastSets?.firstOrNull()?.weight
+        _lastReps.value = lastSets?.firstOrNull()?.reps
 
         // Load today's sets
         loadTodaySets(exercise.id)
@@ -119,6 +145,10 @@ class WorkoutViewModel(
             ExerciseStatus(index, hasSets)
         }
         _exerciseStatuses.value = statuses
+    }
+
+    fun setReps(value: Int) {
+        _reps.value = value
     }
 
     fun incrementReps() {

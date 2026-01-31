@@ -1,5 +1,6 @@
 package com.example.trivialfitnesstracker
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -36,6 +37,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<FloatingActionButton>(R.id.startWorkoutFab).setOnClickListener {
+            startActivity(Intent(this, WorkoutActivity::class.java))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Check if there's an active workout session and resume it
+        val prefs = getSharedPreferences("workout_state", Context.MODE_PRIVATE)
+        val savedSessionId = prefs.getLong("session_id", -1)
+        if (savedSessionId != -1L) {
             startActivity(Intent(this, WorkoutActivity::class.java))
         }
     }

@@ -26,4 +26,5 @@
     <string name="sets_today">Sets: %s</string>
     <string name="no_sets_yet">No sets logged yet</string>
     <string name="finish_workout">Finish</string>
+    <string name="finish_workout_confirm">Are you sure you want to finish this workout?</string>
 </resources>
