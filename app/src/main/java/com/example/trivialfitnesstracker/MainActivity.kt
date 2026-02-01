@@ -59,10 +59,6 @@ class MainActivity : AppCompatActivity() {
         
         val graphView = findViewById<ContributionGraphView>(R.id.mainContributionGraph)
         loadGraphData(graphView)
-
-        findViewById<FloatingActionButton>(R.id.startWorkoutFab).setOnClickListener {
-            showDayPickerDialog()
-        }
     }
 
     private fun loadGraphData(graphView: ContributionGraphView) {
@@ -125,30 +121,6 @@ class MainActivity : AppCompatActivity() {
         }
         
         return calendar.timeInMillis
-    }
-
-    private fun showDayPickerDialog() {
-        val dayNames = workoutDays.map { it.displayName() }.toTypedArray()
-        val todayIndex = getTodayWorkoutDayIndex()
-        
-        val picker = NumberPicker(this).apply {
-            minValue = 0
-            maxValue = dayNames.size - 1
-            displayedValues = dayNames
-            value = todayIndex
-            wrapSelectorWheel = true
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(R.string.select_day)
-            .setView(picker)
-            .setPositiveButton(R.string.start_workout) { _, _ ->
-                val intent = Intent(this, WorkoutActivity::class.java)
-                intent.putExtra(WorkoutActivity.EXTRA_DAY, workoutDays[picker.value].name)
-                startActivity(intent)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
     }
 
     private fun getTodayWorkoutDayIndex(): Int {

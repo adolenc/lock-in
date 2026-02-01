@@ -25,12 +25,12 @@
         android:paddingBottom="80dp" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/addExerciseFab"
+        android:id="@+id/startDayWorkoutFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
         android:layout_margin="16dp"
-        android:contentDescription="@string/add_exercise"
-        android:src="@android:drawable/ic_input_add" />
+        android:contentDescription="@string/start_workout"
+        android:src="@android:drawable/ic_media_play" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

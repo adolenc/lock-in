@@ -21,7 +21,9 @@ import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.data.entity.Exercise
 import com.example.trivialfitnesstracker.ui.history.ExerciseHistoryActivity
+import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import android.widget.Button
 
 class ExerciseListActivity : AppCompatActivity() {
 
@@ -57,7 +59,8 @@ class ExerciseListActivity : AppCompatActivity() {
         adapter = ExerciseAdapter(
             onStartDrag = { holder -> itemTouchHelper.startDrag(holder) },
             onDelete = { exercise -> showDeleteConfirmation(exercise) },
-            onClick = { exercise -> openExerciseHistory(exercise) }
+            onClick = { exercise -> openExerciseHistory(exercise) },
+            onAddExercise = { showAddExerciseDialog() }
         )
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
@@ -71,11 +74,19 @@ class ExerciseListActivity : AppCompatActivity() {
 
         viewModel.exercises.observe(this) { exercises ->
             adapter.submitList(exercises)
+            // Don't show empty view, as we always have the footer button now
+            // Or better, show empty view only if exercises is empty AND keep button visible?
+            // With current adapter implementation, button is part of RecyclerView, so if exercises is empty, we have 1 item (button).
+            // So recycler view is never empty.
+            // If we want empty view text "No exercises" to appear when list is empty, we should position it carefully.
+            // But user requirement is just about button position.
             emptyView.visibility = if (exercises.isEmpty()) View.VISIBLE else View.GONE
         }
 
-        findViewById<FloatingActionButton>(R.id.addExerciseFab).setOnClickListener {
-            showAddExerciseDialog()
+        findViewById<FloatingActionButton>(R.id.startDayWorkoutFab).setOnClickListener {
+            val intent = Intent(this, WorkoutActivity::class.java)
+            intent.putExtra(WorkoutActivity.EXTRA_DAY, day.name)
+            startActivity(intent)
         }
     }
 
@@ -124,8 +135,20 @@ private class DragCallback(
         viewHolder: RecyclerView.ViewHolder,
         target: RecyclerView.ViewHolder
     ): Boolean {
+        // Prevent moving items to or past the footer (last item)
+        val adapter = recyclerView.adapter as ExerciseAdapter
+        if (target.adapterPosition == adapter.itemCount - 1) {
+            return false
+        }
+        
         onMove(viewHolder.adapterPosition, target.adapterPosition)
         return true
+    }
+    
+    override fun canDropOver(recyclerView: RecyclerView, current: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+        val adapter = recyclerView.adapter as ExerciseAdapter
+        // Prevent dropping over the footer
+        return target.adapterPosition != adapter.itemCount - 1
     }
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
@@ -134,13 +157,28 @@ private class DragCallback(
         super.clearView(recyclerView, viewHolder)
         onDrop()
     }
+    
+    override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+        val adapter = recyclerView.adapter as ExerciseAdapter
+        // Disable drag for the footer
+        if (viewHolder.adapterPosition == adapter.itemCount - 1) {
+            return makeMovementFlags(0, 0)
+        }
+        return super.getMovementFlags(recyclerView, viewHolder)
+    }
 }
 
 private class ExerciseAdapter(
     private val onStartDrag: (RecyclerView.ViewHolder) -> Unit,
     private val onDelete: (Exercise) -> Unit,
-    private val onClick: (Exercise) -> Unit
-) : RecyclerView.Adapter<ExerciseAdapter.ExerciseViewHolder>() {
+    private val onClick: (Exercise) -> Unit,
+    private val onAddExercise: () -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    companion object {
+        private const val VIEW_TYPE_ITEM = 0
+        private const val VIEW_TYPE_FOOTER = 1
+    }
 
     private val exercises: MutableList<Exercise> = mutableListOf()
 
@@ -151,6 +189,7 @@ private class ExerciseAdapter(
     }
 
     fun moveItem(from: Int, to: Int) {
+        if (to >= exercises.size) return // Should be prevented by DragCallback, but safe check
         val item = exercises.removeAt(from)
         exercises.add(to, item)
         notifyItemMoved(from, to)
@@ -163,26 +202,44 @@ private class ExerciseAdapter(
         val name: TextView = view.findViewById(R.id.exerciseName)
         val delete: TextView = view.findViewById(R.id.deleteButton)
     }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ExerciseViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_exercise, parent, false)
-        return ExerciseViewHolder(view)
+    
+    class FooterViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val addButton: Button = view.findViewById(R.id.addExerciseButton)
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onBindViewHolder(holder: ExerciseViewHolder, position: Int) {
-        val exercise = exercises[position]
-        holder.name.text = exercise.name
-        holder.delete.setOnClickListener { onDelete(exercise) }
-        holder.itemView.setOnClickListener { onClick(exercise) }
-        holder.dragHandle.setOnTouchListener { _, event ->
-            if (event.actionMasked == MotionEvent.ACTION_DOWN) {
-                onStartDrag(holder)
-            }
-            false
+    override fun getItemViewType(position: Int): Int {
+        return if (position == exercises.size) VIEW_TYPE_FOOTER else VIEW_TYPE_ITEM
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == VIEW_TYPE_FOOTER) {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_add_exercise_footer, parent, false)
+            FooterViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_exercise, parent, false)
+            ExerciseViewHolder(view)
         }
     }
 
-    override fun getItemCount() = exercises.size
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is FooterViewHolder) {
+            holder.addButton.setOnClickListener { onAddExercise() }
+        } else if (holder is ExerciseViewHolder) {
+            val exercise = exercises[position]
+            holder.name.text = exercise.name
+            holder.delete.setOnClickListener { onDelete(exercise) }
+            holder.itemView.setOnClickListener { onClick(exercise) }
+            holder.dragHandle.setOnTouchListener { _, event ->
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    onStartDrag(holder)
+                }
+                false
+            }
+        }
+    }
+
+    override fun getItemCount() = exercises.size + 1
 }
