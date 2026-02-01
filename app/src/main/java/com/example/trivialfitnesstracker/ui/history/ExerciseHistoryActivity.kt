@@ -99,6 +99,11 @@ class ExerciseHistoryActivity : AppCompatActivity() {
             emptyView.visibility = View.GONE
         }
     }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
+    }
 }
 
 private data class HistoryItem(
