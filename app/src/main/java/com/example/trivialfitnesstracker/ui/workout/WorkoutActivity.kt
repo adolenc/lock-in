@@ -66,6 +66,7 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var timerText: TextView
     private lateinit var timerProgress: ProgressBar
     private lateinit var skipTimerButton: Button
+    private lateinit var finishWorkoutButton: Button
     private lateinit var weightColorIndicator: View
 
     // Specific weight values requested by user
@@ -110,6 +111,7 @@ class WorkoutActivity : AppCompatActivity() {
         timerText = findViewById(R.id.timerText)
         timerProgress = findViewById(R.id.timerProgress)
         skipTimerButton = findViewById(R.id.skipTimerButton)
+        finishWorkoutButton = findViewById(R.id.finishWorkoutButton)
         weightColorIndicator = findViewById(R.id.weightColorIndicator)
 
         // Setup weight picker (0-200kg in 0.5kg increments)
@@ -193,8 +195,8 @@ class WorkoutActivity : AppCompatActivity() {
         viewModel.progress.observe(this) { (current, total) ->
             prevButton.isEnabled = !viewModel.isFirstExercise()
             prevButton.alpha = if (viewModel.isFirstExercise()) 0.5f else 1f
-            nextButton.text = if (viewModel.isLastExercise()) 
-                getString(R.string.finish_workout) else getString(R.string.next)
+            nextButton.isEnabled = !viewModel.isLastExercise()
+            nextButton.alpha = if (viewModel.isLastExercise()) 0.5f else 1f
             
             // Save state whenever exercise changes
             viewModel.getSessionInfo()?.let { (sessionId, day) ->
@@ -330,11 +332,11 @@ class WorkoutActivity : AppCompatActivity() {
 
         nextButton.setOnClickListener {
             updateWeightIfChanged()
-            if (viewModel.isLastExercise()) {
-                showFinishConfirmation()
-            } else {
-                viewModel.nextExercise()
-            }
+            viewModel.nextExercise()
+        }
+
+        finishWorkoutButton.setOnClickListener {
+            showFinishConfirmation()
         }
     }
 

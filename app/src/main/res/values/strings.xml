@@ -20,8 +20,8 @@
     <string name="log_set">Log Set</string>
     <string name="log_dropdown">+ Drop Set</string>
     <string name="undo">Undo</string>
-    <string name="previous">← Previous</string>
-    <string name="next">Next →</string>
+    <string name="previous">&lt; PREV</string>
+    <string name="next">NEXT &gt;</string>
     <string name="no_history">No previous data</string>
     <string name="select_day">Select Workout Day</string>
     <string name="exercise_progress">Exercise %1$d of %2$d</string>

@@ -12,18 +12,33 @@
     android:orientation="vertical"
     android:paddingTop="32dp">
 
-    <!-- Exercise name -->
-    <TextView
-        android:id="@+id/exerciseName"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
         android:paddingTop="24dp"
-        android:paddingBottom="8dp"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        tools:text="Bench Press" />
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/exerciseName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            tools:text="Bench Press" />
+
+        <Button
+            android:id="@+id/finishWorkoutButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/finish_workout"
+            android:textSize="12sp"
+            android:textColor="#F44336"
+            style="?android:attr/buttonBarButtonStyle" />
+    </LinearLayout>
 
     <!-- History section -->
     <LinearLayout
@@ -255,35 +270,34 @@
 
     </LinearLayout>
 
-    <!-- Progress dots -->
-    <LinearLayout
-        android:id="@+id/progressDots"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="12dp" />
-
-    <!-- Navigation buttons -->
+    <!-- Navigation section with buttons and progress dots inline -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="16dp">
 
         <Button
             android:id="@+id/prevExerciseButton"
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="@string/previous"
             style="?android:attr/buttonBarButtonStyle" />
 
-        <Button
-            android:id="@+id/nextExerciseButton"
+        <LinearLayout
+            android:id="@+id/progressDots"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingHorizontal="8dp" />
+
+        <Button
+            android:id="@+id/nextExerciseButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:text="@string/next"
             style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
