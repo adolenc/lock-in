@@ -38,6 +38,7 @@
     <string name="time_remaining">Time remaining: %s</string>
     <string name="rest_timer_done">Time to do your next set!</string>
     <string name="settings">Settings</string>
+    <string name="stats">Stats</string>
     <string name="rest_timer_duration">Rest Timer Duration</string>
     <string name="minutes_short">min</string>
     <string name="seconds_short">sec</string>

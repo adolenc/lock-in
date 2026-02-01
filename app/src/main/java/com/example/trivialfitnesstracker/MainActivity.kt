@@ -17,6 +17,7 @@ import android.widget.TextView
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.setup.ExerciseListActivity
 import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
+import com.example.trivialfitnesstracker.ui.stats.StatsActivity
 import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.Calendar
@@ -109,6 +110,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_stats -> {
+                startActivity(Intent(this, StatsActivity::class.java))
+                true
+            }
             R.id.action_settings -> {
                 startActivity(Intent(this, SettingsActivity::class.java))
                 true
