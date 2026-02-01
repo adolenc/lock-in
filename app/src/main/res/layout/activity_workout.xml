@@ -125,6 +125,13 @@
                 android:layout_height="110dp"
                 android:scaleX="1.15"
                 android:scaleY="1.15" />
+
+            <View
+                android:id="@+id/weightColorIndicator"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginTop="8dp"
+                android:background="#000000" />
         </LinearLayout>
 
         <!-- Reps picker (center aligned to screen) -->

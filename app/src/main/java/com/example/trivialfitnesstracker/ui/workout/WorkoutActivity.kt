@@ -66,6 +66,7 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var timerText: TextView
     private lateinit var timerProgress: ProgressBar
     private lateinit var skipTimerButton: Button
+    private lateinit var weightColorIndicator: View
 
     // Specific weight values requested by user
     private val weightValues = listOf(
@@ -109,6 +110,7 @@ class WorkoutActivity : AppCompatActivity() {
         timerText = findViewById(R.id.timerText)
         timerProgress = findViewById(R.id.timerProgress)
         skipTimerButton = findViewById(R.id.skipTimerButton)
+        weightColorIndicator = findViewById(R.id.weightColorIndicator)
 
         // Setup weight picker (0-200kg in 0.5kg increments)
         weightPicker.minValue = 0
@@ -116,6 +118,10 @@ class WorkoutActivity : AppCompatActivity() {
         weightPicker.displayedValues = weightDisplayValues
         weightPicker.wrapSelectorWheel = false
         weightPicker.value = 0 // Default to 7kg
+        weightPicker.setOnValueChangedListener { _, _, newVal ->
+            updateWeightColor(weightValues[newVal])
+        }
+        updateWeightColor(weightValues[weightPicker.value])
 
         // Setup reps picker (1-50)
         repsPicker.minValue = 1
@@ -242,6 +248,7 @@ class WorkoutActivity : AppCompatActivity() {
                 val index = weightValues.indexOfFirst { it >= weight }
                 if (index >= 0) {
                     weightPicker.value = index
+                    updateWeightColor(weightValues[index])
                 }
             }
         }
@@ -334,6 +341,17 @@ class WorkoutActivity : AppCompatActivity() {
     private fun updateWeightIfChanged() {
         val weight = weightValues[weightPicker.value]
         viewModel.updateWeight(weight)
+    }
+
+    private fun updateWeightColor(weight: Float) {
+        val color = when (weight) {
+            in 7f..9f -> Color.BLACK
+            in 11.5f..13.5f -> Color.WHITE
+            in 16f..18f -> Color.parseColor("#9C27B0") // Purple
+            in 20.5f..22.5f -> Color.parseColor("#4CAF50") // Green
+            else -> Color.TRANSPARENT
+        }
+        weightColorIndicator.setBackgroundColor(color)
     }
 
     private fun showFinishConfirmation() {
