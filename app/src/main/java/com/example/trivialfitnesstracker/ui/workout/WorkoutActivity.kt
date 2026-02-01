@@ -7,6 +7,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -16,11 +18,15 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.NumberPicker
 import android.widget.ProgressBar
+import android.widget.RelativeLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,9 +39,6 @@ import com.example.trivialfitnesstracker.data.AppDatabase
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
-
-import android.view.GestureDetector
-import androidx.core.view.GestureDetectorCompat
 import kotlin.math.abs
 
 class WorkoutActivity : AppCompatActivity() {
@@ -73,8 +76,12 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var skipTimerButton: Button
     private lateinit var finishWorkoutButton: Button
     private lateinit var weightColorIndicator: View
+    private lateinit var slidingContainer: ScrollView
     
-    private lateinit var gestureDetector: GestureDetectorCompat
+    private var startX = 0f
+    private var startY = 0f
+    private var isDragging = false
+    private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
 
     // Specific weight values requested by user
     private val weightValues = listOf(
@@ -94,8 +101,6 @@ class WorkoutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
-
-        gestureDetector = GestureDetectorCompat(this, SwipeGestureListener())
 
         // Hide action bar for cleaner look
         supportActionBar?.hide()
@@ -122,6 +127,7 @@ class WorkoutActivity : AppCompatActivity() {
         skipTimerButton = findViewById(R.id.skipTimerButton)
         finishWorkoutButton = findViewById(R.id.finishWorkoutButton)
         weightColorIndicator = findViewById(R.id.weightColorIndicator)
+        slidingContainer = findViewById(R.id.slidingContainer)
 
         // Setup weight picker (0-200kg in 0.5kg increments)
         weightPicker.minValue = 0
@@ -180,52 +186,8 @@ class WorkoutActivity : AppCompatActivity() {
         }
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
-        if (ev != null) {
-            gestureDetector.onTouchEvent(ev)
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
-    private inner class SwipeGestureListener : GestureDetector.SimpleOnGestureListener() {
-        private val SWIPE_THRESHOLD = 100
-        private val SWIPE_VELOCITY_THRESHOLD = 100
-
-        override fun onDown(e: MotionEvent): Boolean {
-            return true
-        }
-
-        override fun onFling(
-            e1: MotionEvent?,
-            e2: MotionEvent,
-            velocityX: Float,
-            velocityY: Float
-        ): Boolean {
-            if (e1 == null) return false
-            
-            val diffY = e2.y - e1.y
-            val diffX = e2.x - e1.x
-            
-            if (abs(diffX) > abs(diffY)) {
-                if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
-                    if (diffX > 0) {
-                        // Swipe Right -> Previous
-                        if (!viewModel.isFirstExercise()) {
-                            updateWeightIfChanged()
-                            viewModel.previousExercise()
-                        }
-                    } else {
-                        // Swipe Left -> Next
-                        if (!viewModel.isLastExercise()) {
-                            updateWeightIfChanged()
-                            viewModel.nextExercise()
-                        }
-                    }
-                    return true
-                }
-            }
-            return false
-        }
+    override fun onBackPressed() {
+        // Disable back button - must use Finish
     }
 
     private fun saveWorkoutState(sessionId: Long, day: DayOfWeek, exerciseIndex: Int) {
@@ -238,10 +200,6 @@ class WorkoutActivity : AppCompatActivity() {
 
     private fun clearWorkoutState() {
         prefs.edit().clear().apply()
-    }
-
-    override fun onBackPressed() {
-        // Disable back button - must use Finish
     }
 
     private fun setupObservers() {
@@ -351,7 +309,6 @@ class WorkoutActivity : AppCompatActivity() {
             if (finished) finish()
         }
     }
-
     private fun setupClickListeners() {
         findViewById<Button>(R.id.logSetButton).setOnClickListener {
             val weight = weightValues[weightPicker.value]
@@ -383,18 +340,141 @@ class WorkoutActivity : AppCompatActivity() {
         }
 
         prevButton.setOnClickListener {
-            updateWeightIfChanged()
-            viewModel.previousExercise()
+            animateNavigation(false)
         }
 
         nextButton.setOnClickListener {
-            updateWeightIfChanged()
-            viewModel.nextExercise()
+            animateNavigation(true)
         }
 
         finishWorkoutButton.setOnClickListener {
             showFinishConfirmation()
         }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                startX = ev.rawX
+                startY = ev.rawY
+                isDragging = false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!isDragging) {
+                    val diffX = ev.rawX - startX
+                    val diffY = ev.rawY - startY
+                    if (abs(diffX) > touchSlop && abs(diffX) > abs(diffY)) {
+                        // Check boundaries
+                        if ((diffX > 0 && !viewModel.isFirstExercise()) || 
+                            (diffX < 0 && !viewModel.isLastExercise())) {
+                            isDragging = true
+                            // Cancel scrolling
+                            val cancel = MotionEvent.obtain(ev)
+                            cancel.action = MotionEvent.ACTION_CANCEL
+                            super.dispatchTouchEvent(cancel)
+                            cancel.recycle()
+                        }
+                    }
+                }
+                
+                if (isDragging) {
+                    val diffX = ev.rawX - startX
+                    slidingContainer.translationX = diffX
+                    return true
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                 if (isDragging) {
+                     finishSwipe(ev.rawX - startX)
+                     isDragging = false
+                     return true
+                 }
+            }
+        }
+        
+        if (isDragging) return true
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private fun finishSwipe(diffX: Float) {
+        val width = slidingContainer.width
+        val threshold = width * 0.25f 
+        
+        if (abs(diffX) > threshold) {
+            val forward = diffX < 0
+            if ((forward && viewModel.isLastExercise()) || (!forward && viewModel.isFirstExercise())) {
+                 // Bounce back if boundary reached
+                 slidingContainer.animate().translationX(0f).setDuration(200).start()
+                 return
+            }
+            performPageSwitch(forward)
+        } else {
+            // Cancel swipe
+            slidingContainer.animate().translationX(0f).setDuration(200).start()
+        }
+    }
+
+    private fun animateNavigation(forward: Boolean) {
+        if (forward && viewModel.isLastExercise()) return
+        if (!forward && viewModel.isFirstExercise()) return
+        performPageSwitch(forward)
+    }
+
+    private fun performPageSwitch(forward: Boolean) {
+        // 1. Snapshot current view
+        val bitmap = createSnapshot(slidingContainer)
+        val snapshotView = android.widget.ImageView(this).apply {
+            setImageBitmap(bitmap)
+            layoutParams = RelativeLayout.LayoutParams(slidingContainer.layoutParams as RelativeLayout.LayoutParams)
+            translationX = slidingContainer.translationX
+            // Ensure background opacity if bitmap has transparency
+            background = slidingContainer.background
+        }
+        
+        // Add snapshot to root
+        val root = slidingContainer.parent as ViewGroup
+        root.addView(snapshotView)
+
+        // 2. Prepare next view
+        val width = slidingContainer.width.toFloat()
+        val targetExitX = if (forward) -width else width
+        val startEntryX = if (forward) width else -width
+        
+        // Move real view to entry position
+        slidingContainer.translationX = startEntryX
+        
+        // 3. Update Data
+        updateWeightIfChanged()
+        if (forward) viewModel.nextExercise() else viewModel.previousExercise()
+        
+        // 4. Animate both
+        snapshotView.animate()
+            .translationX(targetExitX)
+            .setDuration(300)
+            .withEndAction {
+                root.removeView(snapshotView)
+                bitmap.recycle() // Clean up memory
+            }
+            .start()
+            
+        slidingContainer.animate()
+            .translationX(0f)
+            .setDuration(300)
+            .start()
+    }
+
+    private fun createSnapshot(view: View): Bitmap {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        // Ensure background is drawn
+        val background = view.background
+        if (background != null) {
+            background.draw(canvas)
+        } else {
+            canvas.drawColor(Color.WHITE) // Fallback
+        }
+        view.draw(canvas)
+        return bitmap
     }
 
     private fun updateWeightIfChanged() {
@@ -415,15 +495,15 @@ class WorkoutActivity : AppCompatActivity() {
 
     private fun showFinishConfirmation() {
         AlertDialog.Builder(this)
-            .setTitle(R.string.finish_workout)
-            .setMessage(R.string.finish_workout_confirm)
-            .setPositiveButton(R.string.finish_workout) { _, _ ->
-                stopRestTimer()
-                clearWorkoutState()
-                finish()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        .setTitle(R.string.finish_workout)
+        .setMessage(R.string.finish_workout_confirm)
+        .setPositiveButton(R.string.finish_workout) { _, _ ->
+            stopRestTimer()
+            clearWorkoutState()
+            finish()
+        }
+        .setNegativeButton(R.string.cancel, null)
+        .show()
     }
 
     private fun showNoteDialog() {
