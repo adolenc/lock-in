@@ -2,7 +2,9 @@ package com.example.trivialfitnesstracker.ui.history
 
 import android.os.Bundle
 import android.widget.TextView
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,12 +28,15 @@ class ExerciseHistoryActivity : AppCompatActivity() {
     }
 
     private lateinit var repository: WorkoutRepository
+    private lateinit var exerciseName: String
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var emptyView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_exercise_history)
 
-        val exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME) ?: run {
+        exerciseName = intent.getStringExtra(EXTRA_EXERCISE_NAME) ?: run {
             finish()
             return
         }
@@ -46,10 +51,14 @@ class ExerciseHistoryActivity : AppCompatActivity() {
             db.setLogDao()
         )
 
-        val recyclerView = findViewById<RecyclerView>(R.id.historyRecyclerView)
-        val emptyView = findViewById<TextView>(R.id.emptyView)
+        recyclerView = findViewById<RecyclerView>(R.id.historyRecyclerView)
+        emptyView = findViewById<TextView>(R.id.emptyView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
+        loadHistory()
+    }
+
+    private fun loadHistory() {
         lifecycleScope.launch {
             // Get all exercises with this name
             val exercises = repository.getExercisesByName(exerciseName)
@@ -64,6 +73,7 @@ class ExerciseHistoryActivity : AppCompatActivity() {
             
             if (logs.isEmpty()) {
                 emptyView.visibility = View.VISIBLE
+                recyclerView.adapter = null
                 return@launch
             }
 
@@ -73,7 +83,19 @@ class ExerciseHistoryActivity : AppCompatActivity() {
                 HistoryItem(log, sets)
             }
 
-            recyclerView.adapter = HistoryAdapter(historyItems)
+            recyclerView.adapter = HistoryAdapter(historyItems) { log ->
+                AlertDialog.Builder(this@ExerciseHistoryActivity)
+                    .setTitle("Delete Log")
+                    .setMessage("Are you sure you want to delete this log?")
+                    .setPositiveButton("Delete") { _, _ ->
+                        lifecycleScope.launch {
+                            repository.deleteExerciseLog(log)
+                            loadHistory()
+                        }
+                    }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
             emptyView.visibility = View.GONE
         }
     }
@@ -85,7 +107,8 @@ private data class HistoryItem(
 )
 
 private class HistoryAdapter(
-    private val items: List<HistoryItem>
+    private val items: List<HistoryItem>,
+    private val onDeleteClick: (ExerciseLog) -> Unit
 ) : RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
 
     private val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
@@ -94,6 +117,7 @@ private class HistoryAdapter(
         val dateText: TextView = view.findViewById(R.id.dateText)
         val setsText: TextView = view.findViewById(R.id.setsText)
         val noteText: TextView = view.findViewById(R.id.noteText)
+        val deleteButton: ImageButton = view.findViewById(R.id.deleteButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
@@ -106,6 +130,7 @@ private class HistoryAdapter(
         val item = items[position]
         
         holder.dateText.text = dateFormat.format(Date(item.log.completedAt))
+        holder.deleteButton.setOnClickListener { onDeleteClick(item.log) }
         
         val regularSets = item.sets.filter { !it.isDropdown }
         val dropdownSets = item.sets.filter { it.isDropdown }

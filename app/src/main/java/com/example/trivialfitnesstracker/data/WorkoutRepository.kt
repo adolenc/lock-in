@@ -66,6 +66,8 @@ class WorkoutRepository(
     suspend fun updateExerciseNote(exerciseLogId: Long, note: String?) =
         exerciseLogDao.updateNote(exerciseLogId, note)
 
+    suspend fun deleteExerciseLog(log: ExerciseLog) = exerciseLogDao.delete(log)
+
     // Set log operations
     suspend fun logSet(exerciseLogId: Long, weight: Float?, reps: Int, isDropdown: Boolean = false): Long {
         val setNumber = if (isDropdown) {
