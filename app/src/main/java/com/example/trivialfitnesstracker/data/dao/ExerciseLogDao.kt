@@ -3,9 +3,29 @@ package com.example.trivialfitnesstracker.data.dao
 import androidx.room.*
 import com.example.trivialfitnesstracker.data.entity.ExerciseLog
 import com.example.trivialfitnesstracker.data.entity.SetLog
+import com.example.trivialfitnesstracker.data.model.ExerciseStatsTuple
 
 @Dao
 interface ExerciseLogDao {
+    @Query("""
+        SELECT 
+            e.id as exerciseId,
+            e.name as exerciseName,
+            e.dayOfWeek as dayName,
+            e.orderIndex,
+            ws.date, 
+            SUM(sl.reps * (CASE WHEN sl.weight IS NULL THEN 1.0 ELSE sl.weight END)) as totalWeight 
+        FROM workout_sessions ws 
+        JOIN exercise_logs el ON ws.id = el.sessionId 
+        JOIN set_logs sl ON el.id = sl.exerciseLogId 
+        JOIN exercises e ON el.exerciseId = e.id
+        WHERE sl.isDropdown = 0 
+          AND ws.date >= :startDate 
+        GROUP BY e.id, ws.date 
+        ORDER BY e.name ASC, ws.date ASC
+    """)
+    suspend fun getExerciseStats(startDate: Long): List<ExerciseStatsTuple>
+
     @Query("SELECT * FROM exercise_logs WHERE sessionId = :sessionId ORDER BY completedAt ASC")
     suspend fun getLogsForSession(sessionId: Long): List<ExerciseLog>
 
