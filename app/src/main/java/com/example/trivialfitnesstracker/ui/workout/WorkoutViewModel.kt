@@ -45,9 +45,6 @@ class WorkoutViewModel(
     private val _todaySets = MutableLiveData<List<SetLog>>()
     val todaySets: LiveData<List<SetLog>> = _todaySets
 
-    private val _reps = MutableLiveData(10)
-    val reps: LiveData<Int> = _reps
-
     private val _lastReps = MutableLiveData<Int?>()
     val lastReps: LiveData<Int?> = _lastReps
 
@@ -156,34 +153,21 @@ class WorkoutViewModel(
         _exerciseStatuses.value = statuses
     }
 
-    fun setReps(value: Int) {
-        _reps.value = value
-    }
-
-    fun incrementReps() {
-        _reps.value = (_reps.value ?: 10) + 1
-    }
-
-    fun decrementReps() {
-        val current = _reps.value ?: 10
-        if (current > 1) _reps.value = current - 1
-    }
-
-    fun logSet(weight: Float) {
+    fun logSet(weight: Float, reps: Int) {
         viewModelScope.launch {
             val exercise = _currentExercise.value ?: return@launch
             val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
-            lastLoggedSetId = repository.logSet(exerciseLog.id, weight, _reps.value ?: 10, isDropdown = false)
+            lastLoggedSetId = repository.logSet(exerciseLog.id, weight, reps, isDropdown = false)
             _canUndo.value = true
             loadTodaySets(exercise.id)
         }
     }
 
-    fun logDropdown() {
+    fun logDropdown(reps: Int) {
         viewModelScope.launch {
             val exercise = _currentExercise.value ?: return@launch
             val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
-            lastLoggedSetId = repository.logSet(exerciseLog.id, null, _reps.value ?: 10, isDropdown = true)
+            lastLoggedSetId = repository.logSet(exerciseLog.id, null, reps, isDropdown = true)
             _canUndo.value = true
             loadTodaySets(exercise.id)
         }

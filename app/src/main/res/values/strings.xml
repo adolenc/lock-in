@@ -14,7 +14,8 @@
     <string name="edit_exercises">Edit exercises</string>
     <string name="recent_history">Recent History</string>
     <string name="todays_workout">Today</string>
-    <string name="weight_label">Weight:</string>
+    <string name="weight_label_kg">Weight [kg]</string>
+    <string name="reps_label">Reps</string>
     <string name="kg">kg</string>
     <string name="log_set">Log Set</string>
     <string name="log_dropdown">+ Drop Set</string>

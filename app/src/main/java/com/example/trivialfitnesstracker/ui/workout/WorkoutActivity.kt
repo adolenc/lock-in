@@ -18,6 +18,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.NumberPicker
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -50,9 +51,9 @@ class WorkoutActivity : AppCompatActivity() {
 
     private lateinit var exerciseName: TextView
     private lateinit var historyText: TextView
-    private lateinit var weightInput: EditText
+    private lateinit var weightPicker: NumberPicker
+    private lateinit var repsPicker: NumberPicker
     private lateinit var todaySetsText: TextView
-    private lateinit var repsDisplay: TextView
     private lateinit var prevButton: Button
     private lateinit var nextButton: Button
     private lateinit var undoButton: Button
@@ -63,6 +64,12 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var timerText: TextView
     private lateinit var timerProgress: ProgressBar
     private lateinit var skipTimerButton: Button
+
+    // Weight values: 0, 0.5, 1, 1.5, ... up to 200kg
+    private val weightValues = (0..400).map { it * 0.5f }
+    private val weightDisplayValues = weightValues.map { 
+        if (it == it.toInt().toFloat()) it.toInt().toString() else String.format("%.1f", it) 
+    }.toTypedArray()
 
     private var countDownTimer: CountDownTimer? = null
     private var isTimerRunning = false
@@ -80,9 +87,9 @@ class WorkoutActivity : AppCompatActivity() {
         // Bind views
         exerciseName = findViewById(R.id.exerciseName)
         historyText = findViewById(R.id.historyText)
-        weightInput = findViewById(R.id.weightInput)
+        weightPicker = findViewById(R.id.weightPicker)
+        repsPicker = findViewById(R.id.repsPicker)
         todaySetsText = findViewById(R.id.todaySetsText)
-        repsDisplay = findViewById(R.id.repsDisplay)
         prevButton = findViewById(R.id.prevExerciseButton)
         nextButton = findViewById(R.id.nextExerciseButton)
         undoButton = findViewById(R.id.undoButton)
@@ -93,6 +100,19 @@ class WorkoutActivity : AppCompatActivity() {
         timerText = findViewById(R.id.timerText)
         timerProgress = findViewById(R.id.timerProgress)
         skipTimerButton = findViewById(R.id.skipTimerButton)
+
+        // Setup weight picker (0-200kg in 0.5kg increments)
+        weightPicker.minValue = 0
+        weightPicker.maxValue = weightValues.size - 1
+        weightPicker.displayedValues = weightDisplayValues
+        weightPicker.wrapSelectorWheel = false
+        weightPicker.value = 40 // Default to 20kg
+
+        // Setup reps picker (1-50)
+        repsPicker.minValue = 1
+        repsPicker.maxValue = 50
+        repsPicker.wrapSelectorWheel = false
+        repsPicker.value = 10 // Default to 10 reps
 
         createNotificationChannel()
         requestNotificationPermission()
@@ -179,7 +199,6 @@ class WorkoutActivity : AppCompatActivity() {
                     
                     setOnClickListener {
                         viewModel.goToExercise(status.index)
-                        weightInput.text.clear()
                     }
                 }
                 progressDots.addView(dot)
@@ -204,14 +223,17 @@ class WorkoutActivity : AppCompatActivity() {
         }
 
         viewModel.lastWeight.observe(this) { weight ->
-            if (weight != null && weightInput.text.isEmpty()) {
-                weightInput.setText(weight.toInt().toString())
+            if (weight != null) {
+                val index = weightValues.indexOfFirst { it >= weight }
+                if (index >= 0) {
+                    weightPicker.value = index
+                }
             }
         }
 
         viewModel.lastReps.observe(this) { reps ->
             if (reps != null) {
-                viewModel.setReps(reps)
+                repsPicker.value = reps.coerceIn(1, 50)
             }
         }
 
@@ -226,10 +248,6 @@ class WorkoutActivity : AppCompatActivity() {
                     " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
                 todaySetsText.text = getString(R.string.sets_today, "$reps$dropdown")
             }
-        }
-
-        viewModel.reps.observe(this) { reps ->
-            repsDisplay.text = reps.toString()
         }
 
         viewModel.canUndo.observe(this) { canUndo ->
@@ -254,22 +272,16 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        findViewById<Button>(R.id.incrementReps).setOnClickListener {
-            viewModel.incrementReps()
-        }
-
-        findViewById<Button>(R.id.decrementReps).setOnClickListener {
-            viewModel.decrementReps()
-        }
-
         findViewById<Button>(R.id.logSetButton).setOnClickListener {
-            val weight = weightInput.text.toString().toFloatOrNull() ?: 0f
-            viewModel.logSet(weight)
+            val weight = weightValues[weightPicker.value]
+            val reps = repsPicker.value
+            viewModel.logSet(weight, reps)
             startRestTimer()
         }
 
         findViewById<Button>(R.id.logDropdownButton).setOnClickListener {
-            viewModel.logDropdown()
+            val reps = repsPicker.value
+            viewModel.logDropdown(reps)
             startRestTimer()
         }
 
@@ -292,7 +304,6 @@ class WorkoutActivity : AppCompatActivity() {
         prevButton.setOnClickListener {
             updateWeightIfChanged()
             viewModel.previousExercise()
-            weightInput.text.clear()
         }
 
         nextButton.setOnClickListener {
@@ -301,16 +312,13 @@ class WorkoutActivity : AppCompatActivity() {
                 showFinishConfirmation()
             } else {
                 viewModel.nextExercise()
-                weightInput.text.clear()
             }
         }
     }
 
     private fun updateWeightIfChanged() {
-        val weight = weightInput.text.toString().toFloatOrNull()
-        if (weight != null) {
-            viewModel.updateWeight(weight)
-        }
+        val weight = weightValues[weightPicker.value]
+        viewModel.updateWeight(weight)
     }
 
     private fun showFinishConfirmation() {

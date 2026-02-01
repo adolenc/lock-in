@@ -80,70 +80,57 @@
             android:textSize="14sp" />
     </LinearLayout>
 
-    <!-- Weight input -->
-    <LinearLayout
+    <!-- Weight and Reps pickers -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingHorizontal="12dp"
-        android:paddingTop="12dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/weight_label"
-            android:textSize="16sp" />
-
-        <EditText
-            android:id="@+id/weightInput"
-            android:layout_width="80dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:inputType="numberDecimal"
-            android:textSize="18sp"
-            android:gravity="center" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:text="@string/kg"
-            android:textSize="16sp" />
-    </LinearLayout>
-
-    <!-- Reps input -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
         android:paddingHorizontal="16dp"
         android:paddingTop="16dp">
 
-        <Button
-            android:id="@+id/decrementReps"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="−"
-            android:textSize="24sp" />
-
-        <TextView
-            android:id="@+id/repsDisplay"
-            android:layout_width="80dp"
+        <!-- Weight picker (left aligned) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            tools:text="10" />
+            android:orientation="vertical"
+            android:layout_gravity="start">
 
-        <Button
-            android:id="@+id/incrementReps"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:text="+"
-            android:textSize="24sp" />
-    </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/weight_label_kg"
+                android:textSize="14sp" />
+
+            <NumberPicker
+                android:id="@+id/weightPicker"
+                android:layout_width="wrap_content"
+                android:layout_height="80dp"
+                android:scaleX="0.9"
+                android:scaleY="0.9" />
+        </LinearLayout>
+
+        <!-- Reps picker (center aligned to screen) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reps_label"
+                android:textSize="14sp" />
+
+            <NumberPicker
+                android:id="@+id/repsPicker"
+                android:layout_width="wrap_content"
+                android:layout_height="80dp"
+                android:scaleX="0.9"
+                android:scaleY="0.9" />
+        </LinearLayout>
+
+    </FrameLayout>
 
     <!-- Log Set and Drop Set buttons stacked -->
     <Button
