@@ -67,8 +67,13 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var timerProgress: ProgressBar
     private lateinit var skipTimerButton: Button
 
-    // Weight values: 0, 0.5, 1, 1.5, ... up to 200kg
-    private val weightValues = (0..400).map { it * 0.5f }
+    // Specific weight values requested by user
+    private val weightValues = listOf(
+        7f, 8f, 9f,              // Black
+        11.5f, 12.5f, 13.5f,     // White
+        16f, 17f, 18f,           // Purple
+        20.5f, 21.5f, 22.5f      // Green
+    )
     private val weightDisplayValues = weightValues.map { 
         if (it == it.toInt().toFloat()) it.toInt().toString() else String.format("%.1f", it) 
     }.toTypedArray()
@@ -110,7 +115,7 @@ class WorkoutActivity : AppCompatActivity() {
         weightPicker.maxValue = weightValues.size - 1
         weightPicker.displayedValues = weightDisplayValues
         weightPicker.wrapSelectorWheel = false
-        weightPicker.value = 40 // Default to 20kg
+        weightPicker.value = 0 // Default to 7kg
 
         // Setup reps picker (1-50)
         repsPicker.minValue = 1
