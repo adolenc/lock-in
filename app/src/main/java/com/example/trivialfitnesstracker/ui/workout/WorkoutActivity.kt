@@ -230,7 +230,7 @@ class WorkoutActivity : AppCompatActivity() {
             if (historyList.isEmpty()) {
                 historyText.text = getString(R.string.no_history)
             } else {
-                historyText.text = historyList.joinToString("\n") { h ->
+                historyText.text = historyList.reversed().joinToString("\n") { h ->
                     val regularSets = h.sets.filter { !it.isDropdown }
                     val dropdownSets = h.sets.filter { it.isDropdown }
                     val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "?"
