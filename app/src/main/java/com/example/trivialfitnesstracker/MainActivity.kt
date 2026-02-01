@@ -22,6 +22,15 @@ import com.example.trivialfitnesstracker.ui.workout.WorkoutActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.Calendar
 
+import com.example.trivialfitnesstracker.ui.stats.ContributionGraphView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
+import androidx.lifecycle.lifecycleScope
+import com.example.trivialfitnesstracker.data.AppDatabase
+
 class MainActivity : AppCompatActivity() {
 
     private val workoutDays = listOf(
@@ -44,9 +53,34 @@ class MainActivity : AppCompatActivity() {
             intent.putExtra(ExerciseListActivity.EXTRA_DAY, day.name)
             startActivity(intent)
         }
+        
+        val graphView = findViewById<ContributionGraphView>(R.id.mainContributionGraph)
+        loadGraphData(graphView)
 
         findViewById<FloatingActionButton>(R.id.startWorkoutFab).setOnClickListener {
             showDayPickerDialog()
+        }
+    }
+
+    private fun loadGraphData(graphView: ContributionGraphView) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val dao = AppDatabase.getDatabase(applicationContext).workoutSessionDao()
+            val rawStats = dao.getDailySetCounts()
+
+            // Aggregate by LocalDate
+            val statsMap = rawStats
+                .groupBy { 
+                    Instant.ofEpochMilli(it.date)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+                .mapValues { entry ->
+                    entry.value.sumOf { it.setCount }
+                }
+
+            withContext(Dispatchers.Main) {
+                graphView.setData(statsMap)
+            }
         }
     }
 
@@ -101,6 +135,10 @@ class MainActivity : AppCompatActivity() {
         if (savedSessionId != -1L) {
             startActivity(Intent(this, WorkoutActivity::class.java))
         }
+        
+        // Refresh graph data when returning to main activity (in case a workout was just finished)
+        val graphView = findViewById<ContributionGraphView>(R.id.mainContributionGraph)
+        loadGraphData(graphView)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
