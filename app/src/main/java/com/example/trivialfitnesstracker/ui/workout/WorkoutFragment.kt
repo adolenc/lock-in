@@ -47,14 +47,17 @@ class WorkoutFragment : Fragment() {
     private lateinit var addNoteButton: Button
     private lateinit var weightColorIndicator: View
 
-    private val weightValues = listOf(
+    private val weightValues: List<Float?> = listOf(
+        null,                    // No weight
         7f, 8f, 9f,              // Black
         11.5f, 12.5f, 13.5f,     // White
         16f, 17f, 18f,           // Purple
         20.5f, 21.5f, 22.5f      // Green
     )
-    private val weightDisplayValues = weightValues.map { 
-        if (it == it.toInt().toFloat()) it.toInt().toString() else String.format("%.1f", it) 
+    private val weightDisplayValues = weightValues.map {
+        if (it == null) "/" 
+        else if (it == it.toInt().toFloat()) it.toInt().toString() 
+        else String.format("%.1f", it) 
     }.toTypedArray()
 
     override fun onCreateView(
@@ -167,7 +170,10 @@ class WorkoutFragment : Fragment() {
                 historyText.text = historyList.reversed().joinToString("\n") { h: ExerciseHistory ->
                     val regularSets = h.sets.filter { !it.isDropdown }
                     val dropdownSets = h.sets.filter { it.isDropdown }
-                    val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "?"
+                    val weightVal = regularSets.firstOrNull()?.weight
+                    val weight = weightVal?.let {
+                        if (it == it.toInt().toFloat()) "${it.toInt()}kg" else "${it}kg"
+                    } ?: "/"
                     val reps = regularSets.joinToString(", ") { it.reps.toString() }
                     val dropdown = if (dropdownSets.isNotEmpty()) 
                         " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
@@ -178,12 +184,16 @@ class WorkoutFragment : Fragment() {
         }
 
         viewModel.lastWeight.observe(viewLifecycleOwner) { weight ->
-            if (weight != null) {
-                val index = weightValues.indexOfFirst { it >= weight }
-                if (index >= 0) {
-                    weightPicker.value = index
-                    updateWeightColor(weightValues[index])
-                }
+            // If weight is null, it might mean "no weight" (/) or no history.
+            // In both cases, index 0 (which is null) is appropriate.
+            val index = if (weight == null) 0 else {
+                val i = weightValues.indexOfFirst { it != null && it >= weight }
+                if (i >= 0) i else 0
+            }
+            
+            if (index >= 0 && index < weightValues.size) {
+                weightPicker.value = index
+                updateWeightColor(weightValues[index])
             }
         }
 
@@ -226,13 +236,17 @@ class WorkoutFragment : Fragment() {
         }
     }
 
-    private fun updateWeightColor(weight: Float) {
-        val color = when (weight) {
-            in 7f..9f -> Color.BLACK
-            in 11.5f..13.5f -> Color.WHITE
-            in 16f..18f -> Color.parseColor("#9C27B0") // Purple
-            in 20.5f..22.5f -> Color.parseColor("#4CAF50") // Green
-            else -> Color.TRANSPARENT
+    private fun updateWeightColor(weight: Float?) {
+        val color = if (weight == null) {
+            Color.TRANSPARENT
+        } else {
+            when (weight) {
+                in 7f..9f -> Color.BLACK
+                in 11.5f..13.5f -> Color.WHITE
+                in 16f..18f -> Color.parseColor("#9C27B0") // Purple
+                in 20.5f..22.5f -> Color.parseColor("#4CAF50") // Green
+                else -> Color.TRANSPARENT
+            }
         }
         weightColorIndicator.setBackgroundColor(color)
     }

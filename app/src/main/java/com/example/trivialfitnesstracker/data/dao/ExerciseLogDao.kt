@@ -46,5 +46,5 @@ interface SetLogDao {
     suspend fun deleteById(id: Long)
 
     @Query("UPDATE set_logs SET weight = :weight WHERE exerciseLogId = :exerciseLogId AND isDropdown = 0")
-    suspend fun updateWeight(exerciseLogId: Long, weight: Float)
+    suspend fun updateWeight(exerciseLogId: Long, weight: Float?)
 }

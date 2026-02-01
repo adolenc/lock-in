@@ -52,20 +52,12 @@ class WorkoutPageViewModel(
             val ex = repository.getExerciseById(exerciseId) ?: return@launch
             _exercise.value = ex
 
-            // Load history
-            val recentLogs = repository.getRecentLogsForExercise(exerciseId, 3)
-            val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-            val historyList = recentLogs.map { log ->
-                val sets = repository.getSetsForExerciseLog(log.id)
-                ExerciseHistory(
-                    date = dateFormat.format(Date(log.completedAt)),
-                    sets = sets,
-                    note = log.note
-                )
-            }
-            _history.value = historyList
-
-            // Get last weight and reps
+            loadHistory()
+            
+            // Get last weight and reps (from initial history load)
+            // Note: If we want this to update dynamically, we should move it to loadHistory or observe history
+            // But usually initial load is fine.
+            val historyList = _history.value ?: emptyList()
             val lastSets = historyList.firstOrNull()?.sets?.filter { !it.isDropdown }
             _lastWeight.value = lastSets?.firstOrNull()?.weight
             _lastReps.value = lastSets?.firstOrNull()?.reps
@@ -79,18 +71,33 @@ class WorkoutPageViewModel(
         }
     }
 
+    private suspend fun loadHistory() {
+        val recentLogs = repository.getRecentLogsForExercise(exerciseId, 3)
+        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+        val historyList = recentLogs.map { log ->
+            val sets = repository.getSetsForExerciseLog(log.id)
+            ExerciseHistory(
+                date = dateFormat.format(Date(log.completedAt)),
+                sets = sets,
+                note = log.note
+            )
+        }
+        _history.value = historyList
+    }
+
     private suspend fun loadTodaySets() {
         val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exerciseId)
         val sets = repository.getSetsForExerciseLog(exerciseLog.id)
         _todaySets.value = sets
     }
 
-    fun logSet(weight: Float, reps: Int) {
+    fun logSet(weight: Float?, reps: Int) {
         viewModelScope.launch {
             val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exerciseId)
             lastLoggedSetId = repository.logSet(exerciseLog.id, weight, reps, isDropdown = false)
             _canUndo.value = true
             loadTodaySets()
+            loadHistory() // Refresh history in case current session is displayed there
         }
     }
 
@@ -100,6 +107,7 @@ class WorkoutPageViewModel(
             lastLoggedSetId = repository.logSet(exerciseLog.id, null, reps, isDropdown = true)
             _canUndo.value = true
             loadTodaySets()
+            loadHistory()
         }
     }
 
@@ -110,6 +118,7 @@ class WorkoutPageViewModel(
             lastLoggedSetId = null
             _canUndo.value = false
             loadTodaySets()
+            loadHistory()
         }
     }
 
@@ -122,10 +131,13 @@ class WorkoutPageViewModel(
         }
     }
 
-    fun updateWeight(newWeight: Float) {
+    fun updateWeight(newWeight: Float?) {
         viewModelScope.launch {
             val exerciseLog = repository.getExerciseLogForSession(sessionId, exerciseId) ?: return@launch
             repository.updateSetsWeight(exerciseLog.id, newWeight)
+            // Refresh data to reflect weight change in UI
+            loadTodaySets()
+            loadHistory()
         }
     }
 }

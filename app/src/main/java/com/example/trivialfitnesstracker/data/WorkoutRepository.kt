@@ -82,6 +82,6 @@ class WorkoutRepository(
 
     suspend fun deleteSetLog(setLogId: Long) = setLogDao.deleteById(setLogId)
 
-    suspend fun updateSetsWeight(exerciseLogId: Long, weight: Float) = 
+    suspend fun updateSetsWeight(exerciseLogId: Long, weight: Float?) = 
         setLogDao.updateWeight(exerciseLogId, weight)
 }
