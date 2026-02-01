@@ -14,6 +14,7 @@ import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -32,6 +33,10 @@ import com.example.trivialfitnesstracker.data.AppDatabase
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
+
+import android.view.GestureDetector
+import androidx.core.view.GestureDetectorCompat
+import kotlin.math.abs
 
 class WorkoutActivity : AppCompatActivity() {
 
@@ -68,6 +73,8 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var skipTimerButton: Button
     private lateinit var finishWorkoutButton: Button
     private lateinit var weightColorIndicator: View
+    
+    private lateinit var gestureDetector: GestureDetectorCompat
 
     // Specific weight values requested by user
     private val weightValues = listOf(
@@ -87,6 +94,8 @@ class WorkoutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
+
+        gestureDetector = GestureDetectorCompat(this, SwipeGestureListener())
 
         // Hide action bar for cleaner look
         supportActionBar?.hide()
@@ -168,6 +177,54 @@ class WorkoutActivity : AppCompatActivity() {
         } else {
             // No day provided and no saved session - go back
             finish()
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        if (ev != null) {
+            gestureDetector.onTouchEvent(ev)
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
+    private inner class SwipeGestureListener : GestureDetector.SimpleOnGestureListener() {
+        private val SWIPE_THRESHOLD = 100
+        private val SWIPE_VELOCITY_THRESHOLD = 100
+
+        override fun onDown(e: MotionEvent): Boolean {
+            return true
+        }
+
+        override fun onFling(
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float
+        ): Boolean {
+            if (e1 == null) return false
+            
+            val diffY = e2.y - e1.y
+            val diffX = e2.x - e1.x
+            
+            if (abs(diffX) > abs(diffY)) {
+                if (abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffX > 0) {
+                        // Swipe Right -> Previous
+                        if (!viewModel.isFirstExercise()) {
+                            updateWeightIfChanged()
+                            viewModel.previousExercise()
+                        }
+                    } else {
+                        // Swipe Left -> Next
+                        if (!viewModel.isLastExercise()) {
+                            updateWeightIfChanged()
+                            viewModel.nextExercise()
+                        }
+                    }
+                    return true
+                }
+            }
+            return false
         }
     }
 
