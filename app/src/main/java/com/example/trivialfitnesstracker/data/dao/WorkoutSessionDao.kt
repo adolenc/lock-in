@@ -28,6 +28,14 @@ interface WorkoutSessionDao {
     @Query("SELECT * FROM workout_sessions ORDER BY date DESC LIMIT 1")
     suspend fun getMostRecent(): WorkoutSession?
 
+    @Query("""
+        SELECT DISTINCT ws.dayOfWeek
+        FROM workout_sessions ws
+        JOIN exercise_logs el ON ws.id = el.sessionId
+        WHERE ws.date >= :startDate
+    """)
+    suspend fun getDaysWithCompletedExercisesSince(startDate: Long): List<DayOfWeek>
+
     @Insert
     suspend fun insert(session: WorkoutSession): Long
 

@@ -40,6 +40,8 @@ class MainActivity : AppCompatActivity() {
         DayOfWeek.SATURDAY
     )
 
+    private lateinit var dayAdapter: DayAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -48,11 +50,12 @@ class MainActivity : AppCompatActivity() {
 
         val recyclerView = findViewById<RecyclerView>(R.id.daysRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = DayAdapter(workoutDays) { day ->
+        dayAdapter = DayAdapter(workoutDays) { day ->
             val intent = Intent(this, ExerciseListActivity::class.java)
             intent.putExtra(ExerciseListActivity.EXTRA_DAY, day.name)
             startActivity(intent)
         }
+        recyclerView.adapter = dayAdapter
         
         val graphView = findViewById<ContributionGraphView>(R.id.mainContributionGraph)
         loadGraphData(graphView)
@@ -82,6 +85,46 @@ class MainActivity : AppCompatActivity() {
                 graphView.setData(statsMap)
             }
         }
+    }
+
+    private fun loadCompletedDays() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val dao = AppDatabase.getDatabase(applicationContext).workoutSessionDao()
+            val startOfWeek = getStartOfWeek()
+            val completedDays = dao.getDaysWithCompletedExercisesSince(startOfWeek).toSet()
+            
+            withContext(Dispatchers.Main) {
+                dayAdapter.completedDays = completedDays
+            }
+        }
+    }
+
+    private fun getStartOfWeek(): Long {
+        val calendar = Calendar.getInstance()
+        // If today is Sunday (first day of week in US), setting DAY_OF_WEEK to MONDAY goes forward to tomorrow.
+        // We want the previous Monday.
+        // If today is Monday, we want today 00:00.
+        
+        // Ensure we are at start of day
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        // Adjust to Monday
+        var dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+        // Convert to Monday=0, Sunday=6 relative to Monday
+        // Calendar.MONDAY is 2.
+        // If today is Monday (2), diff should be 0.
+        // If today is Tuesday (3), diff should be -1.
+        // If today is Sunday (1), diff should be -6.
+        
+        // Let's iterate backwards until we hit Monday.
+        while (calendar.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            calendar.add(Calendar.DAY_OF_MONTH, -1)
+        }
+        
+        return calendar.timeInMillis
     }
 
     private fun showDayPickerDialog() {
@@ -139,6 +182,7 @@ class MainActivity : AppCompatActivity() {
         // Refresh graph data when returning to main activity (in case a workout was just finished)
         val graphView = findViewById<ContributionGraphView>(R.id.mainContributionGraph)
         loadGraphData(graphView)
+        loadCompletedDays()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -161,13 +205,20 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-private class DayAdapter(
+    private class DayAdapter(
     private val days: List<DayOfWeek>,
     private val onClick: (DayOfWeek) -> Unit
 ) : RecyclerView.Adapter<DayAdapter.DayViewHolder>() {
 
+    var completedDays: Set<DayOfWeek> = emptySet()
+        set(value) {
+            field = value
+            notifyDataSetChanged()
+        }
+
     class DayViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val dayName: TextView = view.findViewById(R.id.dayName)
+        val indicator: View = view.findViewById(R.id.completionIndicator)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DayViewHolder {
@@ -179,6 +230,7 @@ private class DayAdapter(
     override fun onBindViewHolder(holder: DayViewHolder, position: Int) {
         val day = days[position]
         holder.dayName.text = day.displayName()
+        holder.indicator.visibility = if (day in completedDays) View.VISIBLE else View.GONE
         holder.itemView.setOnClickListener { onClick(day) }
     }
 
