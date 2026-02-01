@@ -17,6 +17,8 @@ class WorkoutRepository(
     
     suspend fun getExercisesForDaySync(day: DayOfWeek) = exerciseDao.getExercisesForDaySync(day)
 
+    suspend fun getExerciseById(id: Long) = exerciseDao.getById(id)
+
     suspend fun getExercisesByName(name: String) = exerciseDao.getByName(name)
 
     suspend fun addExercise(name: String, day: DayOfWeek): Long {

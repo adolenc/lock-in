@@ -7,8 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -16,32 +14,29 @@ import android.os.CountDownTimer
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.widget.Button
-import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.NumberPicker
 import android.widget.ProgressBar
-import android.widget.RelativeLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
 import com.example.trivialfitnesstracker.R
 import com.example.trivialfitnesstracker.data.AppDatabase
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
+import com.example.trivialfitnesstracker.data.entity.Exercise
 import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
-import kotlin.math.abs
 
 class WorkoutActivity : AppCompatActivity() {
+
 
     companion object {
         const val EXTRA_DAY = "extra_day"
@@ -57,46 +52,18 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var viewModel: WorkoutViewModel
     private lateinit var prefs: android.content.SharedPreferences
 
-    private lateinit var exerciseName: TextView
-    private lateinit var historyText: TextView
-    private lateinit var historyHeader: LinearLayout
-    private lateinit var historyArrow: TextView
-    private lateinit var weightPicker: NumberPicker
-    private lateinit var repsPicker: NumberPicker
-    private lateinit var todaySetsText: TextView
     private lateinit var prevButton: Button
     private lateinit var nextButton: Button
-    private lateinit var undoButton: Button
     private lateinit var progressDots: LinearLayout
-    private lateinit var noteText: TextView
-    private lateinit var addNoteButton: Button
     private lateinit var timerContainer: LinearLayout
     private lateinit var timerText: TextView
     private lateinit var timerProgress: ProgressBar
     private lateinit var skipTimerButton: Button
     private lateinit var finishWorkoutButton: Button
-    private lateinit var weightColorIndicator: View
-    private lateinit var slidingContainer: ScrollView
+    private lateinit var viewPager: ViewPager2
     
-    private var startX = 0f
-    private var startY = 0f
-    private var isDragging = false
-    private val touchSlop by lazy { ViewConfiguration.get(this).scaledTouchSlop }
-
-    // Specific weight values requested by user
-    private val weightValues = listOf(
-        7f, 8f, 9f,              // Black
-        11.5f, 12.5f, 13.5f,     // White
-        16f, 17f, 18f,           // Purple
-        20.5f, 21.5f, 22.5f      // Green
-    )
-    private val weightDisplayValues = weightValues.map { 
-        if (it == it.toInt().toFloat()) it.toInt().toString() else String.format("%.1f", it) 
-    }.toTypedArray()
-
     private var countDownTimer: CountDownTimer? = null
     private var isTimerRunning = false
-    private var isInForeground = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -108,49 +75,15 @@ class WorkoutActivity : AppCompatActivity() {
         prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
 
         // Bind views
-        exerciseName = findViewById(R.id.exerciseName)
-        historyHeader = findViewById(R.id.historyHeader)
-        historyArrow = findViewById(R.id.historyArrow)
-        historyText = findViewById(R.id.historyText)
-        weightPicker = findViewById(R.id.weightPicker)
-        repsPicker = findViewById(R.id.repsPicker)
-        todaySetsText = findViewById(R.id.todaySetsText)
         prevButton = findViewById(R.id.prevExerciseButton)
         nextButton = findViewById(R.id.nextExerciseButton)
-        undoButton = findViewById(R.id.undoButton)
         progressDots = findViewById(R.id.progressDots)
-        noteText = findViewById(R.id.noteText)
-        addNoteButton = findViewById(R.id.addNoteButton)
         timerContainer = findViewById(R.id.timerContainer)
         timerText = findViewById(R.id.timerText)
         timerProgress = findViewById(R.id.timerProgress)
         skipTimerButton = findViewById(R.id.skipTimerButton)
         finishWorkoutButton = findViewById(R.id.finishWorkoutButton)
-        weightColorIndicator = findViewById(R.id.weightColorIndicator)
-        slidingContainer = findViewById(R.id.slidingContainer)
-
-        // Setup weight picker (0-200kg in 0.5kg increments)
-        weightPicker.minValue = 0
-        weightPicker.maxValue = weightValues.size - 1
-        weightPicker.displayedValues = weightDisplayValues
-        weightPicker.wrapSelectorWheel = false
-        weightPicker.value = 0 // Default to 7kg
-        weightPicker.setOnValueChangedListener { _, _, newVal ->
-            updateWeightColor(weightValues[newVal])
-        }
-        updateWeightColor(weightValues[weightPicker.value])
-
-        // Setup reps picker (1-50)
-        repsPicker.minValue = 1
-        repsPicker.maxValue = 50
-        repsPicker.wrapSelectorWheel = false
-        repsPicker.value = 10 // Default to 10 reps
-
-        historyHeader.setOnClickListener {
-            val isVisible = historyText.visibility == View.VISIBLE
-            historyText.visibility = if (isVisible) View.GONE else View.VISIBLE
-            historyArrow.text = if (isVisible) "▼" else "▲"
-        }
+        viewPager = findViewById(R.id.viewPager)
 
         createNotificationChannel()
         requestNotificationPermission()
@@ -176,18 +109,20 @@ class WorkoutActivity : AppCompatActivity() {
         val dayExtra = intent.getStringExtra(EXTRA_DAY)
         
         if (savedSessionId != -1L && savedDay != null) {
-            // Resume existing session
             viewModel.resumeWorkout(DayOfWeek.valueOf(savedDay), savedSessionId, savedIndex)
         } else if (dayExtra != null) {
             viewModel.startWorkout(DayOfWeek.valueOf(dayExtra))
         } else {
-            // No day provided and no saved session - go back
             finish()
         }
     }
 
     override fun onBackPressed() {
         // Disable back button - must use Finish
+    }
+
+    fun refreshProgress() {
+        viewModel.updateExerciseStatuses()
     }
 
     private fun saveWorkoutState(sessionId: Long, day: DayOfWeek, exerciseIndex: Int) {
@@ -203,20 +138,27 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
     private fun setupObservers() {
-        viewModel.currentExercise.observe(this) { exercise ->
-            exerciseName.text = exercise?.name ?: ""
+        viewModel.exercisesList.observe(this) { exercises ->
+            if (exercises.isNotEmpty()) {
+                val sessionId = viewModel.getSessionInfo()?.first ?: return@observe
+                
+                viewPager.adapter = object : FragmentStateAdapter(this) {
+                    override fun getItemCount(): Int = exercises.size
+                    override fun createFragment(position: Int): Fragment {
+                        return WorkoutFragment.newInstance(sessionId, exercises[position].id)
+                    }
+                }
+                
+                // Restore index if needed
+                viewPager.setCurrentItem(viewModel.getCurrentIndex(), false)
+            }
         }
 
-        viewModel.progress.observe(this) { (current, total) ->
-            prevButton.isEnabled = !viewModel.isFirstExercise()
-            prevButton.alpha = if (viewModel.isFirstExercise()) 0.5f else 1f
-            nextButton.isEnabled = !viewModel.isLastExercise()
-            nextButton.alpha = if (viewModel.isLastExercise()) 0.5f else 1f
-            
-            // Save state whenever exercise changes
-            viewModel.getSessionInfo()?.let { (sessionId, day) ->
-                saveWorkoutState(sessionId, day, viewModel.getCurrentIndex())
-            }
+        viewModel.currentIndex.observe(this) { index ->
+             if (viewPager.currentItem != index) {
+                 viewPager.setCurrentItem(index, true)
+             }
+             updateNavigationButtons(index)
         }
 
         viewModel.exerciseStatuses.observe(this) { statuses ->
@@ -236,72 +178,10 @@ class WorkoutActivity : AppCompatActivity() {
                     })
                     
                     setOnClickListener {
-                        viewModel.goToExercise(status.index)
+                        viewPager.currentItem = status.index
                     }
                 }
                 progressDots.addView(dot)
-            }
-        }
-
-        viewModel.history.observe(this) { historyList ->
-            if (historyList.isEmpty()) {
-                historyText.text = getString(R.string.no_history)
-            } else {
-                historyText.text = historyList.reversed().joinToString("\n") { h ->
-                    val regularSets = h.sets.filter { !it.isDropdown }
-                    val dropdownSets = h.sets.filter { it.isDropdown }
-                    val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "?"
-                    val reps = regularSets.joinToString(", ") { it.reps.toString() }
-                    val dropdown = if (dropdownSets.isNotEmpty()) 
-                        " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                    val note = if (!h.note.isNullOrEmpty()) " (${h.note})" else ""
-                    "${h.date}: $weight × $reps$dropdown$note"
-                }
-            }
-        }
-
-        viewModel.lastWeight.observe(this) { weight ->
-            if (weight != null) {
-                val index = weightValues.indexOfFirst { it >= weight }
-                if (index >= 0) {
-                    weightPicker.value = index
-                    updateWeightColor(weightValues[index])
-                }
-            }
-        }
-
-        viewModel.lastReps.observe(this) { reps ->
-            if (reps != null) {
-                repsPicker.value = reps.coerceIn(1, 50)
-            }
-        }
-
-        viewModel.todaySets.observe(this) { sets ->
-            if (sets.isEmpty()) {
-                todaySetsText.text = getString(R.string.no_sets_yet)
-            } else {
-                val regularSets = sets.filter { !it.isDropdown }
-                val dropdownSets = sets.filter { it.isDropdown }
-                val reps = regularSets.joinToString(", ") { it.reps.toString() }
-                val dropdown = if (dropdownSets.isNotEmpty())
-                    " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                todaySetsText.text = getString(R.string.sets_today, "$reps$dropdown")
-            }
-        }
-
-        viewModel.canUndo.observe(this) { canUndo ->
-            undoButton.isEnabled = canUndo
-            undoButton.alpha = if (canUndo) 1f else 0.5f
-        }
-
-        viewModel.currentNote.observe(this) { note ->
-            if (note.isNullOrEmpty()) {
-                noteText.visibility = View.GONE
-                addNoteButton.visibility = View.VISIBLE
-            } else {
-                noteText.visibility = View.VISIBLE
-                noteText.text = note
-                addNoteButton.visibility = View.GONE
             }
         }
 
@@ -309,246 +189,51 @@ class WorkoutActivity : AppCompatActivity() {
             if (finished) finish()
         }
     }
+
+    private fun updateNavigationButtons(index: Int) {
+        val count = viewPager.adapter?.itemCount ?: 0
+        prevButton.isEnabled = index > 0
+        prevButton.alpha = if (index > 0) 1f else 0.5f
+        nextButton.isEnabled = index < count - 1
+        nextButton.alpha = if (index < count - 1) 1f else 0.5f
+        
+        viewModel.getSessionInfo()?.let { (sessionId, day) ->
+            saveWorkoutState(sessionId, day, index)
+        }
+        
+        // Update dots visual state
+        refreshProgress()
+    }
+
     private fun setupClickListeners() {
-        findViewById<Button>(R.id.logSetButton).setOnClickListener {
-            val weight = weightValues[weightPicker.value]
-            val reps = repsPicker.value
-            viewModel.logSet(weight, reps)
-            startRestTimer()
-        }
-
-        findViewById<Button>(R.id.logDropdownButton).setOnClickListener {
-            val reps = repsPicker.value
-            viewModel.logDropdown(reps)
-            startRestTimer()
-        }
-
-        undoButton.setOnClickListener {
-            viewModel.undoLastSet()
-        }
-
-        addNoteButton.setOnClickListener {
-            showNoteDialog()
-        }
-
-        noteText.setOnClickListener {
-            showNoteDialog()
-        }
-
         skipTimerButton.setOnClickListener {
             stopRestTimer()
         }
 
         prevButton.setOnClickListener {
-            animateNavigation(false)
+            val current = viewPager.currentItem
+            if (current > 0) viewPager.currentItem = current - 1
         }
 
         nextButton.setOnClickListener {
-            animateNavigation(true)
+            val current = viewPager.currentItem
+            val count = viewPager.adapter?.itemCount ?: 0
+            if (current < count - 1) viewPager.currentItem = current + 1
         }
 
         finishWorkoutButton.setOnClickListener {
             showFinishConfirmation()
         }
-    }
-
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                startX = ev.rawX
-                startY = ev.rawY
-                isDragging = false
-            }
-            MotionEvent.ACTION_MOVE -> {
-                if (!isDragging) {
-                    val diffX = ev.rawX - startX
-                    val diffY = ev.rawY - startY
-                    if (abs(diffX) > touchSlop && abs(diffX) > abs(diffY)) {
-                        // Check boundaries
-                        if ((diffX > 0 && !viewModel.isFirstExercise()) || 
-                            (diffX < 0 && !viewModel.isLastExercise())) {
-                            isDragging = true
-                            // Cancel scrolling
-                            val cancel = MotionEvent.obtain(ev)
-                            cancel.action = MotionEvent.ACTION_CANCEL
-                            super.dispatchTouchEvent(cancel)
-                            cancel.recycle()
-                        }
-                    }
-                }
-                
-                if (isDragging) {
-                    val diffX = ev.rawX - startX
-                    slidingContainer.translationX = diffX
-                    return true
-                }
-            }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                 if (isDragging) {
-                     finishSwipe(ev.rawX - startX)
-                     isDragging = false
-                     return true
-                 }
-            }
-        }
         
-        if (isDragging) return true
-        return super.dispatchTouchEvent(ev)
-    }
-
-    private fun finishSwipe(diffX: Float) {
-        val width = slidingContainer.width
-        val threshold = width * 0.25f 
-        
-        if (abs(diffX) > threshold) {
-            val forward = diffX < 0
-            if ((forward && viewModel.isLastExercise()) || (!forward && viewModel.isFirstExercise())) {
-                 // Bounce back if boundary reached
-                 slidingContainer.animate().translationX(0f).setDuration(200).start()
-                 return
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                viewModel.setCurrentIndex(position)
             }
-            performPageSwitch(forward)
-        } else {
-            // Cancel swipe
-            slidingContainer.animate().translationX(0f).setDuration(200).start()
-        }
+        })
     }
-
-    private fun animateNavigation(forward: Boolean) {
-        if (forward && viewModel.isLastExercise()) return
-        if (!forward && viewModel.isFirstExercise()) return
-        performPageSwitch(forward)
-    }
-
-    private fun performPageSwitch(forward: Boolean) {
-        // 1. Snapshot current view
-        val bitmap = createSnapshot(slidingContainer)
-        val snapshotView = android.widget.ImageView(this).apply {
-            setImageBitmap(bitmap)
-            layoutParams = RelativeLayout.LayoutParams(slidingContainer.layoutParams as RelativeLayout.LayoutParams)
-            translationX = slidingContainer.translationX
-            // Ensure background opacity if bitmap has transparency
-            background = slidingContainer.background
-        }
-        
-        // Add snapshot to root
-        val root = slidingContainer.parent as ViewGroup
-        root.addView(snapshotView)
-
-        // 2. Prepare next view
-        val width = slidingContainer.width.toFloat()
-        val targetExitX = if (forward) -width else width
-        val startEntryX = if (forward) width else -width
-        
-        // Move real view to entry position
-        slidingContainer.translationX = startEntryX
-        
-        // 3. Update Data
-        updateWeightIfChanged()
-        if (forward) viewModel.nextExercise() else viewModel.previousExercise()
-        
-        // 4. Animate both
-        snapshotView.animate()
-            .translationX(targetExitX)
-            .setDuration(300)
-            .withEndAction {
-                root.removeView(snapshotView)
-                bitmap.recycle() // Clean up memory
-            }
-            .start()
-            
-        slidingContainer.animate()
-            .translationX(0f)
-            .setDuration(300)
-            .start()
-    }
-
-    private fun createSnapshot(view: View): Bitmap {
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        // Ensure background is drawn
-        val background = view.background
-        if (background != null) {
-            background.draw(canvas)
-        } else {
-            canvas.drawColor(Color.WHITE) // Fallback
-        }
-        view.draw(canvas)
-        return bitmap
-    }
-
-    private fun updateWeightIfChanged() {
-        val weight = weightValues[weightPicker.value]
-        viewModel.updateWeight(weight)
-    }
-
-    private fun updateWeightColor(weight: Float) {
-        val color = when (weight) {
-            in 7f..9f -> Color.BLACK
-            in 11.5f..13.5f -> Color.WHITE
-            in 16f..18f -> Color.parseColor("#9C27B0") // Purple
-            in 20.5f..22.5f -> Color.parseColor("#4CAF50") // Green
-            else -> Color.TRANSPARENT
-        }
-        weightColorIndicator.setBackgroundColor(color)
-    }
-
-    private fun showFinishConfirmation() {
-        AlertDialog.Builder(this)
-        .setTitle(R.string.finish_workout)
-        .setMessage(R.string.finish_workout_confirm)
-        .setPositiveButton(R.string.finish_workout) { _, _ ->
-            stopRestTimer()
-            clearWorkoutState()
-            finish()
-        }
-        .setNegativeButton(R.string.cancel, null)
-        .show()
-    }
-
-    private fun showNoteDialog() {
-        val input = EditText(this)
-        input.hint = getString(R.string.note_hint)
-        input.setText(viewModel.currentNote.value ?: "")
-
-        AlertDialog.Builder(this)
-            .setTitle(if (viewModel.currentNote.value.isNullOrEmpty()) R.string.add_note else R.string.edit_note)
-            .setView(input)
-            .setPositiveButton(R.string.save) { _, _ ->
-                viewModel.setNote(input.text.toString())
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Rest Timer",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications when rest timer completes"
-            }
-            val notificationManager = getSystemService(NotificationManager::class.java)
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
-                != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    PERMISSION_REQUEST_CODE
-                )
-            }
-        }
-    }
-
-    private fun startRestTimer() {
+    
+    // Timer functions remain same...
+    fun startRestTimer() {
         stopRestTimer()
         
         timerContainer.visibility = View.VISIBLE
@@ -588,7 +273,7 @@ class WorkoutActivity : AppCompatActivity() {
             }
         }.start()
     }
-
+    
     private fun stopRestTimer() {
         countDownTimer?.cancel()
         countDownTimer = null
@@ -596,6 +281,9 @@ class WorkoutActivity : AppCompatActivity() {
         timerContainer.visibility = View.GONE
         NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
     }
+
+    // Other helpers (vibrate, notification, confirm dialog)
+    // ... (Keep existing implementation of these helper methods)
 
     private fun vibrate() {
         try {
@@ -674,17 +362,55 @@ class WorkoutActivity : AppCompatActivity() {
             // Ignore notification errors
         }
     }
+    
+    private fun showFinishConfirmation() {
+        AlertDialog.Builder(this)
+        .setTitle(R.string.finish_workout)
+        .setMessage(R.string.finish_workout_confirm)
+        .setPositiveButton(R.string.finish_workout) { _, _ ->
+            stopRestTimer()
+            clearWorkoutState()
+            finish()
+        }
+        .setNegativeButton(R.string.cancel, null)
+        .show()
+    }
 
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Rest Timer",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications when rest timer completes"
+            }
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) 
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    PERMISSION_REQUEST_CODE
+                )
+            }
+        }
+    }
+    
     override fun onResume() {
         super.onResume()
-        isInForeground = true
     }
-
+    
     override fun onPause() {
         super.onPause()
-        isInForeground = false
     }
-
+    
     override fun onDestroy() {
         super.onDestroy()
         countDownTimer?.cancel()

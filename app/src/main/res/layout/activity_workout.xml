@@ -56,258 +56,58 @@
             style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
 
-    <!-- Sliding Content -->
-    <ScrollView
-        android:id="@+id/slidingContainer"
+    <!-- Sliding Content (ViewPager2) -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_above="@id/navigationBar" />
+
+    <!-- Rest Timer (Global) -->
+    <LinearLayout
+        android:id="@+id/timerContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_above="@id/navigationBar"
-        android:fillViewport="true"
-        android:background="?android:attr/windowBackground">
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="?android:attr/windowBackground"
+        android:elevation="4dp"
+        android:visibility="gone">
 
         <LinearLayout
-            android:id="@+id/workoutContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="32dp">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
-            <!-- Exercise Name -->
             <TextView
-                android:id="@+id/exerciseName"
-                android:layout_width="match_parent"
+                android:id="@+id/timerText"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingEnd="120dp"
-                android:paddingTop="24dp"
-                android:paddingBottom="8dp"
-                android:textSize="28sp"
+                android:layout_weight="1"
+                android:gravity="center_vertical|start"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                tools:text="Bench Press" />
-
-            <!-- History section -->
-            <LinearLayout
-                android:id="@+id/historyHeader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp"
-                android:background="?attr/selectableItemBackground">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/recent_history"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:textColor="#999999" />
-
-                <TextView
-                    android:id="@+id/historyArrow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="▼"
-                    android:textSize="12sp"
-                    android:textColor="#999999" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/historyText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="12dp"
-                android:paddingBottom="16dp"
-                android:textSize="14sp"
-                android:fontFamily="monospace"
-                android:textColor="#999999"
-                android:visibility="gone"
-                tools:text="Jan 28: 60kg × 10, 10, 8 + 5\nJan 25: 60kg × 10, 9, 8 + 6" />
-
-            <!-- Today's workout section -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:padding="12dp"
-                android:text="@string/todays_workout"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-
-            <!-- Today's sets display with Undo button -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="12dp">
-
-                <TextView
-                    android:id="@+id/todaySetsText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textSize="16sp"
-                    android:fontFamily="monospace"
-                    tools:text="Sets: 10, 9" />
-
-                <Button
-                    android:id="@+id/undoButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="40dp"
-                    android:text="@string/undo"
-                    android:textSize="14sp" />
-            </LinearLayout>
-
-            <!-- Weight and Reps pickers -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingTop="32dp">
-
-                <!-- Weight picker (left aligned) -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_gravity="start">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/weight_label_kg"
-                        android:textSize="14sp" />
-
-                    <NumberPicker
-                        android:id="@+id/weightPicker"
-                        android:layout_width="wrap_content"
-                        android:layout_height="110dp"
-                        android:scaleX="1.15"
-                        android:scaleY="1.15" />
-
-                    <View
-                        android:id="@+id/weightColorIndicator"
-                        android:layout_width="match_parent"
-                        android:layout_height="24dp"
-                        android:layout_marginTop="8dp"
-                        android:background="#000000" />
-                </LinearLayout>
-
-                <!-- Reps picker (center aligned to screen) -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_gravity="center_horizontal"
-                    android:gravity="center_horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/reps_label"
-                        android:textSize="14sp" />
-
-                    <NumberPicker
-                        android:id="@+id/repsPicker"
-                        android:layout_width="wrap_content"
-                        android:layout_height="110dp"
-                        android:scaleX="1.15"
-                        android:scaleY="1.15" />
-                </LinearLayout>
-
-            </FrameLayout>
-
-            <!-- Log Set and Drop Set buttons stacked -->
-            <Button
-                android:id="@+id/logSetButton"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:layout_marginTop="32dp"
-                android:paddingHorizontal="32dp"
-                android:text="@string/log_set"
-                android:textSize="16sp" />
+                tools:text="Rest: 1:45" />
 
             <Button
-                android:id="@+id/logDropdownButton"
+                android:id="@+id/skipTimerButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="@string/log_dropdown"
-                style="?android:attr/buttonBarButtonStyle" />
-
-            <!-- Note display (clickable to edit) -->
-            <TextView
-                android:id="@+id/noteText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp"
-                android:textSize="14sp"
-                android:textStyle="italic"
-                android:gravity="center"
-                android:background="?attr/selectableItemBackground"
-                android:visibility="gone"
-                tools:text="Note: felt tired today" />
-
-            <Button
-                android:id="@+id/addNoteButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:text="@string/add_note"
-                style="?android:attr/buttonBarButtonStyle" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="100dp" />
-
-            <!-- Rest Timer -->
-            <LinearLayout
-                android:id="@+id/timerContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/timerText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:gravity="center_vertical|start"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        tools:text="Rest: 1:45" />
-
-                    <Button
-                        android:id="@+id/skipTimerButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/skip"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <ProgressBar
-                    android:id="@+id/timerProgress"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="8dp"
-                    android:layout_marginTop="8dp"
-                    android:max="100"
-                    android:progress="0" />
-
-            </LinearLayout>
-
+                android:layout_height="36dp"
+                android:text="@string/skip"
+                android:textSize="12sp" />
         </LinearLayout>
-    </ScrollView>
+
+        <ProgressBar
+            android:id="@+id/timerProgress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginTop="8dp"
+            android:max="100"
+            android:progress="0" />
+
+    </LinearLayout>
 
 </RelativeLayout>

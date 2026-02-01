@@ -4,16 +4,7 @@ import androidx.lifecycle.*
 import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.data.entity.Exercise
-import com.example.trivialfitnesstracker.data.entity.SetLog
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.*
-
-data class ExerciseHistory(
-    val date: String,
-    val sets: List<SetLog>,
-    val note: String?
-)
 
 data class ExerciseStatus(
     val index: Int,
@@ -27,50 +18,37 @@ class WorkoutViewModel(
     private var sessionId: Long = 0
     private var currentDay: DayOfWeek? = null
     private var exercises: List<Exercise> = emptyList()
-    private var currentIndex = 0
-    private var lastLoggedSetId: Long? = null
-
-    private val _currentExercise = MutableLiveData<Exercise?>()
-    val currentExercise: LiveData<Exercise?> = _currentExercise
-
-    private val _progress = MutableLiveData<Pair<Int, Int>>() // current, total
-    val progress: LiveData<Pair<Int, Int>> = _progress
 
     private val _exerciseStatuses = MutableLiveData<List<ExerciseStatus>>()
     val exerciseStatuses: LiveData<List<ExerciseStatus>> = _exerciseStatuses
 
-    private val _history = MutableLiveData<List<ExerciseHistory>>()
-    val history: LiveData<List<ExerciseHistory>> = _history
-
-    private val _todaySets = MutableLiveData<List<SetLog>>()
-    val todaySets: LiveData<List<SetLog>> = _todaySets
-
-    private val _lastReps = MutableLiveData<Int?>()
-    val lastReps: LiveData<Int?> = _lastReps
-
-    private val _lastWeight = MutableLiveData<Float?>()
-    val lastWeight: LiveData<Float?> = _lastWeight
-
     private val _isFinished = MutableLiveData(false)
     val isFinished: LiveData<Boolean> = _isFinished
 
-    private val _canUndo = MutableLiveData(false)
-    val canUndo: LiveData<Boolean> = _canUndo
+    private val _exercisesList = MutableLiveData<List<Exercise>>()
+    val exercisesList: LiveData<List<Exercise>> = _exercisesList
 
-    private val _currentNote = MutableLiveData<String?>()
-    val currentNote: LiveData<String?> = _currentNote
+    private val _currentIndex = MutableLiveData(0)
+    val currentIndex: LiveData<Int> = _currentIndex
+
+    fun setCurrentIndex(index: Int) {
+        if (index != currentIndex.value) {
+            _currentIndex.value = index
+        }
+    }
 
     fun startWorkout(day: DayOfWeek) {
         viewModelScope.launch {
             exercises = repository.getExercisesForDaySync(day)
             if (exercises.isEmpty()) {
+                _exercisesList.value = exercises
                 _isFinished.value = true
                 return@launch
             }
             sessionId = repository.startWorkoutSession(day)
             currentDay = day
-            currentIndex = 0
-            loadCurrentExercise()
+            _exercisesList.value = exercises
+            _currentIndex.value = 0
             updateExerciseStatuses()
         }
     }
@@ -79,161 +57,43 @@ class WorkoutViewModel(
         viewModelScope.launch {
             exercises = repository.getExercisesForDaySync(day)
             if (exercises.isEmpty()) {
+                _exercisesList.value = exercises
                 _isFinished.value = true
                 return@launch
             }
             sessionId = savedSessionId
             currentDay = day
-            currentIndex = savedIndex.coerceIn(0, exercises.size - 1)
-            loadCurrentExercise()
+            _exercisesList.value = exercises
+            _currentIndex.value = savedIndex.coerceIn(0, exercises.size - 1)
             updateExerciseStatuses()
         }
     }
 
+    fun updateExerciseStatuses() {
+        viewModelScope.launch {
+            val statuses = exercises.mapIndexed { index, exercise ->
+                val log = repository.getExerciseLogForSession(sessionId, exercise.id)
+                val hasSets = if (log != null) {
+                    repository.getSetsForExerciseLog(log.id).isNotEmpty()
+                } else false
+                ExerciseStatus(index, hasSets)
+            }
+            _exerciseStatuses.value = statuses
+        }
+    }
+    
     fun getSessionInfo(): Pair<Long, DayOfWeek>? {
         val day = currentDay ?: return null
         return Pair(sessionId, day)
     }
 
-    private suspend fun loadCurrentExercise() {
-        if (currentIndex >= exercises.size) {
-            _isFinished.value = true
-            return
-        }
-
-        val exercise = exercises[currentIndex]
-        _currentExercise.value = exercise
-        _progress.value = Pair(currentIndex + 1, exercises.size)
-
-        // Load history
-        val recentLogs = repository.getRecentLogsForExercise(exercise.id, 3)
-        val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-        val historyList = recentLogs.map { log ->
-            val sets = repository.getSetsForExerciseLog(log.id)
-            ExerciseHistory(
-                date = dateFormat.format(Date(log.completedAt)),
-                sets = sets,
-                note = log.note
-            )
-        }
-        _history.value = historyList
-
-        // Get last weight and reps used
-        val lastSets = historyList.firstOrNull()?.sets?.filter { !it.isDropdown }
-        _lastWeight.value = lastSets?.firstOrNull()?.weight
-        _lastReps.value = lastSets?.firstOrNull()?.reps
-
-        // Load today's sets
-        loadTodaySets(exercise.id)
-        
-        // Load current note
-        val exerciseLog = repository.getExerciseLogForSession(sessionId, exercise.id)
-        _currentNote.value = exerciseLog?.note
-        
-        // Reset undo state when changing exercises
-        lastLoggedSetId = null
-        _canUndo.value = false
-    }
-
-    private suspend fun loadTodaySets(exerciseId: Long) {
-        val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exerciseId)
-        val sets = repository.getSetsForExerciseLog(exerciseLog.id)
-        _todaySets.value = sets
-        updateExerciseStatuses()
-    }
-
-    private suspend fun updateExerciseStatuses() {
-        val statuses = exercises.mapIndexed { index, exercise ->
-            val log = repository.getExerciseLogForSession(sessionId, exercise.id)
-            val hasSets = if (log != null) {
-                repository.getSetsForExerciseLog(log.id).isNotEmpty()
-            } else false
-            ExerciseStatus(index, hasSets)
-        }
-        _exerciseStatuses.value = statuses
-    }
-
-    fun logSet(weight: Float, reps: Int) {
-        viewModelScope.launch {
-            val exercise = _currentExercise.value ?: return@launch
-            val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
-            lastLoggedSetId = repository.logSet(exerciseLog.id, weight, reps, isDropdown = false)
-            _canUndo.value = true
-            loadTodaySets(exercise.id)
-        }
-    }
-
-    fun logDropdown(reps: Int) {
-        viewModelScope.launch {
-            val exercise = _currentExercise.value ?: return@launch
-            val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
-            lastLoggedSetId = repository.logSet(exerciseLog.id, null, reps, isDropdown = true)
-            _canUndo.value = true
-            loadTodaySets(exercise.id)
-        }
-    }
-
-    fun undoLastSet() {
-        viewModelScope.launch {
-            val setId = lastLoggedSetId ?: return@launch
-            repository.deleteSetLog(setId)
-            lastLoggedSetId = null
-            _canUndo.value = false
-            val exercise = _currentExercise.value ?: return@launch
-            loadTodaySets(exercise.id)
-        }
-    }
-
-    fun setNote(note: String?) {
-        viewModelScope.launch {
-            val exercise = _currentExercise.value ?: return@launch
-            val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exercise.id)
-            val trimmedNote = note?.trim()?.ifEmpty { null }
-            repository.updateExerciseNote(exerciseLog.id, trimmedNote)
-            _currentNote.value = trimmedNote
-        }
-    }
-
-    fun updateWeight(newWeight: Float) {
-        viewModelScope.launch {
-            val exercise = _currentExercise.value ?: return@launch
-            val exerciseLog = repository.getExerciseLogForSession(sessionId, exercise.id) ?: return@launch
-            repository.updateSetsWeight(exerciseLog.id, newWeight)
-        }
-    }
-
-    fun nextExercise() {
-        viewModelScope.launch {
-            if (currentIndex < exercises.size - 1) {
-                currentIndex++
-                loadCurrentExercise()
-            } else {
-                _isFinished.value = true
-            }
-        }
-    }
-
-    fun previousExercise() {
-        viewModelScope.launch {
-            if (currentIndex > 0) {
-                currentIndex--
-                loadCurrentExercise()
-            }
-        }
-    }
+    fun isFirstExercise() = currentIndex.value == 0
+    fun isLastExercise() = currentIndex.value == (exercises.size - 1)
+    fun getCurrentIndex() = currentIndex.value ?: 0
 
     fun goToExercise(index: Int) {
-        viewModelScope.launch {
-            if (index in exercises.indices) {
-                currentIndex = index
-                loadCurrentExercise()
-            }
-        }
+        // Obsolete
     }
-
-    fun isFirstExercise() = currentIndex == 0
-    fun isLastExercise() = currentIndex >= exercises.size - 1
-    fun getCurrentIndex() = currentIndex
 }
 
 class WorkoutViewModelFactory(
