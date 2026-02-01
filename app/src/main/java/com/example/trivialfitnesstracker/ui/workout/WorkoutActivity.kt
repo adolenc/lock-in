@@ -51,6 +51,8 @@ class WorkoutActivity : AppCompatActivity() {
 
     private lateinit var exerciseName: TextView
     private lateinit var historyText: TextView
+    private lateinit var historyHeader: LinearLayout
+    private lateinit var historyArrow: TextView
     private lateinit var weightPicker: NumberPicker
     private lateinit var repsPicker: NumberPicker
     private lateinit var todaySetsText: TextView
@@ -86,6 +88,8 @@ class WorkoutActivity : AppCompatActivity() {
 
         // Bind views
         exerciseName = findViewById(R.id.exerciseName)
+        historyHeader = findViewById(R.id.historyHeader)
+        historyArrow = findViewById(R.id.historyArrow)
         historyText = findViewById(R.id.historyText)
         weightPicker = findViewById(R.id.weightPicker)
         repsPicker = findViewById(R.id.repsPicker)
@@ -113,6 +117,12 @@ class WorkoutActivity : AppCompatActivity() {
         repsPicker.maxValue = 50
         repsPicker.wrapSelectorWheel = false
         repsPicker.value = 10 // Default to 10 reps
+
+        historyHeader.setOnClickListener {
+            val isVisible = historyText.visibility == View.VISIBLE
+            historyText.visibility = if (isVisible) View.GONE else View.VISIBLE
+            historyArrow.text = if (isVisible) "▼" else "▲"
+        }
 
         createNotificationChannel()
         requestNotificationPermission()
