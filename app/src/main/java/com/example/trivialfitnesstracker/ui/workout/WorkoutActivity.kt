@@ -425,7 +425,7 @@ class WorkoutActivity : AppCompatActivity() {
                 val minutes = seconds / 60
                 val secs = seconds % 60
                 val timeText = String.format("%d:%02d", minutes, secs)
-                timerText.text = timeText
+                timerText.text = "Rest: $timeText"
                 
                 val elapsed = restDurationMs - millisUntilFinished
                 val progress = (elapsed * 100 / restDurationMs).toInt()
@@ -435,7 +435,7 @@ class WorkoutActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                timerText.text = "0:00"
+                timerText.text = "Rest: 0:00"
                 timerProgress.progress = 100
                 isTimerRunning = false
                 
