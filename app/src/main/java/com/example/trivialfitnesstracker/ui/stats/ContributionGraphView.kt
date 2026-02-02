@@ -122,7 +122,8 @@ class ContributionGraphView @JvmOverloads constructor(
                 // Check if this day actually belongs to the column's month
                 if (dayDate.monthValue == col.month && dayDate.year == currentYear) {
                     val count = data[dayDate] ?: 0
-                    paint.color = getColorForCount(count)
+                    // If this is today and no contributions, mark it white to highlight current day
+                    paint.color = if (dayDate == today && count == 0) Color.WHITE else getColorForCount(count)
                     
                     val top = paddingTop + headerHeight + row * (boxSize + boxSpacing)
                     val radius = 4f
