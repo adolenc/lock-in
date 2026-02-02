@@ -5,6 +5,8 @@ import com.example.trivialfitnesstracker.data.dao.ExerciseLogDao
 import com.example.trivialfitnesstracker.data.dao.SetLogDao
 import com.example.trivialfitnesstracker.data.dao.WorkoutSessionDao
 import com.example.trivialfitnesstracker.data.entity.*
+import java.time.Instant
+import java.time.ZoneId
 
 class WorkoutRepository(
     private val exerciseDao: ExerciseDao,
@@ -36,7 +38,7 @@ class WorkoutRepository(
     // Workout session operations
     suspend fun startWorkoutSession(day: DayOfWeek): Long {
         return workoutSessionDao.insert(
-            WorkoutSession(date = System.currentTimeMillis(), dayOfWeek = day)
+            WorkoutSession(date = getAdjustedTime(), dayOfWeek = day)
         )
     }
 
@@ -48,10 +50,11 @@ class WorkoutRepository(
         val existing = exerciseLogDao.getLogForSessionAndExercise(sessionId, exerciseId)
         if (existing != null) return existing
         
+        val completedAt = getAdjustedTime()
         val newId = exerciseLogDao.insert(
-            ExerciseLog(sessionId = sessionId, exerciseId = exerciseId, completedAt = System.currentTimeMillis())
+            ExerciseLog(sessionId = sessionId, exerciseId = exerciseId, completedAt = completedAt)
         )
-        return ExerciseLog(id = newId, sessionId = sessionId, exerciseId = exerciseId, completedAt = System.currentTimeMillis())
+        return ExerciseLog(id = newId, sessionId = sessionId, exerciseId = exerciseId, completedAt = completedAt)
     }
 
     suspend fun getExerciseLogForSession(sessionId: Long, exerciseId: Long): ExerciseLog? =
@@ -86,4 +89,15 @@ class WorkoutRepository(
 
     suspend fun updateSetsWeight(exerciseLogId: Long, weight: Float?) = 
         setLogDao.updateWeight(exerciseLogId, weight)
+
+    private fun getAdjustedTime(): Long {
+        val now = System.currentTimeMillis()
+        val zoneId = ZoneId.systemDefault()
+        val zonedDateTime = Instant.ofEpochMilli(now).atZone(zoneId)
+
+        if (zonedDateTime.hour < 4) {
+            return zonedDateTime.minusDays(1).toInstant().toEpochMilli()
+        }
+        return now
+    }
 }
