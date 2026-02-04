@@ -81,6 +81,10 @@ class ExerciseListActivity : AppCompatActivity() {
             // But user requirement is just about button position.
             emptyView.visibility = if (exercises.isEmpty()) View.VISIBLE else View.GONE
         }
+        
+        viewModel.lastLogs.observe(this) { logs ->
+            adapter.updateLastLogs(logs)
+        }
 
         findViewById<FloatingActionButton>(R.id.startDayWorkoutFab).setOnClickListener {
             val intent = Intent(this, WorkoutActivity::class.java)
@@ -169,11 +173,17 @@ private class ExerciseAdapter(
     }
 
     private val exercises: MutableList<Exercise> = mutableListOf()
+    private var lastLogs: Map<Long, String> = emptyMap()
 
     fun submitList(list: List<Exercise>) {
         exercises.clear()
         exercises.addAll(list)
         notifyDataSetChanged()
+    }
+    
+    fun updateLastLogs(logs: Map<Long, String>) {
+        lastLogs = logs
+        notifyDataSetChanged() // Ideally use DiffUtil or specific payload update, but simple for now
     }
 
     fun moveItem(from: Int, to: Int) {
@@ -188,6 +198,7 @@ private class ExerciseAdapter(
     class ExerciseViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val dragHandle: TextView = view.findViewById(R.id.dragHandle)
         val name: TextView = view.findViewById(R.id.exerciseName)
+        val lastLog: TextView = view.findViewById(R.id.lastLogText)
     }
     
     class FooterViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -217,6 +228,15 @@ private class ExerciseAdapter(
         } else if (holder is ExerciseViewHolder) {
             val exercise = exercises[position]
             holder.name.text = exercise.name
+            
+            val logText = lastLogs[exercise.id]
+            if (logText != null) {
+                holder.lastLog.text = logText
+                holder.lastLog.visibility = View.VISIBLE
+            } else {
+                holder.lastLog.visibility = View.GONE
+            }
+
             holder.itemView.setOnClickListener { onClick(exercise) }
             holder.dragHandle.setOnTouchListener { _, event ->
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {

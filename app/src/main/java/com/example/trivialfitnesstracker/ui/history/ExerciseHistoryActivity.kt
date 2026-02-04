@@ -255,7 +255,7 @@ private class HistoryAdapter(
         if (item.sets.isEmpty()) {
             holder.setsText.text = "No sets logged"
         } else {
-            val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "?"
+            val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: "/"
             val reps = regularSets.joinToString(", ") { it.reps.toString() }
             val dropdown = if (dropdownSets.isNotEmpty()) 
                 " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
