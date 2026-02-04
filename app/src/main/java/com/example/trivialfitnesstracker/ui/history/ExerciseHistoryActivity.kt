@@ -113,11 +113,65 @@ class ExerciseHistoryActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_rename_exercise -> {
+                showRenameExerciseDialog()
+                true
+            }
             R.id.action_delete_exercise -> {
                 showDeleteExerciseConfirmation()
                 true
             }
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showRenameExerciseDialog() {
+        val exerciseId = intent.getLongExtra(EXTRA_EXERCISE_ID, -1)
+        
+        lifecycleScope.launch {
+            val exercise = if (exerciseId != -1L) repository.getExerciseById(exerciseId) else null
+            
+            // If viewing all history (no specific exercise ID), we can't easily rename just "one" context.
+            // But we can rename ALL exercises with that name.
+            
+            val input = android.widget.EditText(this@ExerciseHistoryActivity).apply {
+                setText(exerciseName)
+                setSelection(exerciseName.length)
+            }
+            
+            AlertDialog.Builder(this@ExerciseHistoryActivity)
+                .setTitle("Rename Exercise")
+                .setView(input)
+                .setPositiveButton("Save") { _, _ ->
+                    val newName = input.text.toString().trim()
+                    if (newName.isNotEmpty() && newName != exerciseName) {
+                        lifecycleScope.launch {
+                            if (exercise != null) {
+                                // Rename specific exercise
+                                val updated = exercise.copy(name = newName)
+                                repository.updateExercise(updated)
+                            } else {
+                                // Rename ALL exercises with this name
+                                val exercises = repository.getExercisesByName(exerciseName)
+                                exercises.forEach { 
+                                    repository.updateExercise(it.copy(name = newName))
+                                }
+                            }
+                            
+                            // Update local state and UI
+                            exerciseName = newName
+                            title = exerciseName
+                            // Reload history? Actually history is loaded by name, so if we change name
+                            // we need to make sure we load history for new name if we stay on screen.
+                            // But wait, history loading uses `getExercisesByName(exerciseName)`.
+                            // So if we update the DB, we just need to refresh.
+                            
+                            loadHistory()
+                        }
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
 
