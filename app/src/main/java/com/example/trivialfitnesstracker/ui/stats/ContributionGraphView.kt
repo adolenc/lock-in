@@ -32,6 +32,12 @@ class ContributionGraphView @JvmOverloads constructor(
     private val colorL3 = Color.parseColor("#30A14E")
     private val colorL4 = Color.parseColor("#216E39")
 
+    private val borderPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f // will be set in init based on density
+        isAntiAlias = true
+    }
+
     private val monthLabels = mutableListOf<Pair<String, Float>>() // Label, X offset
     private var headerHeight = 0f
     
@@ -44,6 +50,17 @@ class ContributionGraphView @JvmOverloads constructor(
         boxSize = 12f * density
         boxSpacing = 4f * density
         headerHeight = 20f * density
+
+        borderPaint.strokeWidth = 2f * density
+
+        // Resolve accent color
+        val typedValue = android.util.TypedValue()
+        val success = context.theme.resolveAttribute(android.R.attr.colorAccent, typedValue, true)
+        if (success) {
+            borderPaint.color = typedValue.data
+        } else {
+            borderPaint.color = Color.CYAN // Fallback
+        }
 
         textPaint.color = Color.parseColor("#767676")
         textPaint.textSize = 10f * density
@@ -171,12 +188,17 @@ class ContributionGraphView @JvmOverloads constructor(
                 // Check if this day actually belongs to the column's month
                 if (dayDate.monthValue == col.month && dayDate.year == col.year) {
                     val count = data[dayDate] ?: 0
-                    // If this is today and no contributions, mark it white to highlight current day
-                    paint.color = if (dayDate == today && count == 0) Color.WHITE else getColorForCount(count)
+                    
+                    paint.color = getColorForCount(count)
                     
                     val top = paddingTop + headerHeight + row * (boxSize + boxSpacing)
                     val radius = 4f
                     canvas.drawRoundRect(left, top, left + boxSize, top + boxSize, radius, radius, paint)
+                    
+                    // Highlight today with accent border
+                    if (dayDate == today) {
+                        canvas.drawRoundRect(left, top, left + boxSize, top + boxSize, radius, radius, borderPaint)
+                    }
                 }
                 
                 dayDate = dayDate.plusDays(1)
@@ -185,12 +207,13 @@ class ContributionGraphView @JvmOverloads constructor(
     }
 
     private fun getColorForCount(count: Int): Int {
+        // Inverted brightness: More weight -> Brighter (L1)
         return when {
             count == 0 -> colorEmpty
-            count <= 3 -> colorL1
-            count <= 6 -> colorL2
-            count <= 10 -> colorL3
-            else -> colorL4
+            count <= 3 -> colorL4
+            count <= 6 -> colorL3
+            count <= 10 -> colorL2
+            else -> colorL1
         }
     }
 }
