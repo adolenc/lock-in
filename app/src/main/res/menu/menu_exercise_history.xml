@@ -4,11 +4,11 @@
     <item
         android:id="@+id/action_rename_exercise"
         android:title="Rename"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="@drawable/ic_edit"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_delete_exercise"
         android:title="@string/delete"
-        android:icon="@android:drawable/ic_menu_delete"
+        android:icon="@drawable/ic_delete"
         app:showAsAction="ifRoom" />
 </menu>
