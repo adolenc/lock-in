@@ -121,14 +121,7 @@ class ExerciseBarGraphView @JvmOverloads constructor(
                      canvas.drawText(date.month.name.take(3), leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
                 }
             } else {
-                // If compressed, maybe show date periodically or if space allows?
-                // For now, let's show label if it's the first bar of a new month in the sequence
-                // OR if we have few bars, show all dates?
-                // Simple logic: Show MMM if previous bar was different month
-                val prevDate = if (index > 0) itemsToDraw[index-1].first else null
-                if (prevDate == null || prevDate.month != date.month) {
-                    canvas.drawText(date.month.name.take(3), leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
-                }
+                // If compressed (missing days hidden), hide labels as requested
             }
         }
         

@@ -26,15 +26,25 @@ class StatsActivity : AppCompatActivity() {
         
         // List to hold all created graph views so we can update them when switch toggles
         val allGraphViews = mutableListOf<ExerciseBarGraphView>()
-        // Store current data ranges to re-apply
-        val currentDataRanges = mutableMapOf<ExerciseBarGraphView, Triple<Map<java.time.LocalDate, Float>, java.time.LocalDate, java.time.LocalDate>>()
+        // Store only the raw data for each graph, not the derived ranges
+        val graphData = mutableMapOf<ExerciseBarGraphView, Map<java.time.LocalDate, Float>>()
         
         var showMissingDays = true
+        var showAllHistory = false // false = last 3 months, true = all history
 
         statsOptionsButton.setOnClickListener {
             // Using AlertDialog for a modal window in the center of the screen
             val popupView = layoutInflater.inflate(R.layout.popup_stats_options, null)
             val switch = popupView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.showMissingDaysSwitch)
+            val spinner = popupView.findViewById<android.widget.Spinner>(R.id.timeRangeSpinner)
+            
+            // Setup Spinner
+            val timeOptions = listOf("Last 3 months", "All history")
+            val adapter = android.widget.ArrayAdapter(this, android.R.layout.simple_spinner_item, timeOptions)
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinner.adapter = adapter
+            spinner.setSelection(if (showAllHistory) 1 else 0)
+            
             switch.isChecked = showMissingDays
             
             val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
@@ -45,12 +55,18 @@ class StatsActivity : AppCompatActivity() {
                 
             switch.setOnCheckedChangeListener { _, isChecked ->
                 showMissingDays = isChecked
-                allGraphViews.forEach { graph ->
-                     val ranges = currentDataRanges[graph]
-                     if (ranges != null) {
-                         graph.setData(ranges.first, ranges.second, ranges.third, isChecked)
-                     }
+                updateAllGraphs(allGraphViews, graphData, showMissingDays, showAllHistory)
+            }
+            
+            spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                    val newShowAll = position == 1
+                    if (showAllHistory != newShowAll) {
+                        showAllHistory = newShowAll
+                        updateAllGraphs(allGraphViews, graphData, showMissingDays, showAllHistory)
+                    }
                 }
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
             
             dialog.show()
@@ -74,10 +90,8 @@ class StatsActivity : AppCompatActivity() {
                     entry.value.sumOf { it.setCount }
                 }
 
-            // Exercise Stats
-            val threeMonthsAgo = java.time.LocalDate.now().minusMonths(3)
-            val startDate = threeMonthsAgo.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-            val exerciseStats = exerciseLogDao.getExerciseStats(startDate)
+            // Exercise Stats - Fetch ALL stats (start date 0)
+            val exerciseStats = exerciseLogDao.getExerciseStats(0)
             
             // Group by DayName first
             val statsByDay = exerciseStats.groupBy { it.dayName }
@@ -208,14 +222,41 @@ class StatsActivity : AppCompatActivity() {
                                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            setData(dataMap, threeMonthsAgo, java.time.LocalDate.now(), showMissingDays)
+                            // Initial setup using defaults (3 months)
+                            val today = java.time.LocalDate.now()
+                            val threeMonthsAgo = today.minusMonths(3)
+                            setData(dataMap, threeMonthsAgo, today, showMissingDays)
                         }
                         allGraphViews.add(barGraph)
-                        currentDataRanges[barGraph] = Triple(dataMap, threeMonthsAgo, java.time.LocalDate.now())
+                        graphData[barGraph] = dataMap
                         dayContentLayout.addView(barGraph)
                     }
                 }
             }
+        }
+    }
+
+    private fun updateAllGraphs(
+        views: List<ExerciseBarGraphView>,
+        dataMap: Map<ExerciseBarGraphView, Map<java.time.LocalDate, Float>>,
+        showMissingDays: Boolean,
+        showAllHistory: Boolean
+    ) {
+        val today = java.time.LocalDate.now()
+        
+        views.forEach { graph ->
+            val data = dataMap[graph] ?: return@forEach
+            
+            val startDate = if (showAllHistory) {
+                // Find min date in data or today if empty
+                val minDate = data.keys.minOrNull() ?: today
+                // Maybe add some padding? Or just use exact min date.
+                minDate
+            } else {
+                today.minusMonths(3)
+            }
+            
+            graph.setData(data, startDate, today, showMissingDays)
         }
     }
 }
