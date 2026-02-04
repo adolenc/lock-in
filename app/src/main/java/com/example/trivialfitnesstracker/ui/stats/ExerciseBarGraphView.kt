@@ -63,8 +63,14 @@ class ExerciseBarGraphView @JvmOverloads constructor(
         val graphWidth = width - padding - leftPadding
         val graphHeight = height - 2 * padding
         
-        // Find max value
-        val maxValue = (data.values.maxOrNull() ?: 10f).coerceAtLeast(10f)
+        // Find min and max values
+        val validValues = data.values.filter { it > 0f }
+        val actualMin = validValues.minOrNull() ?: 0f
+        val actualMax = validValues.maxOrNull() ?: 10f
+        
+        val minY = if (actualMin > 0) actualMin * 0.9f else 0f
+        val maxY = if (actualMax > 0) actualMax * 1.1f else 10f
+        val yRange = (maxY - minY).coerceAtLeast(1f) // Ensure non-zero range
         
         // Draw axes
         canvas.drawLine(leftPadding, height - padding, width - padding, height - padding, axisPaint) // X axis
@@ -81,7 +87,8 @@ class ExerciseBarGraphView @JvmOverloads constructor(
             val value = data[date] ?: 0f
             
             if (value > 0) {
-                val barHeight = (value / maxValue) * graphHeight
+                val fraction = (value - minY) / yRange
+                val barHeight = fraction * graphHeight
                 val left = leftPadding + i * barWidth
                 val right = left + barWidth - (1f * density)
                 val top = height - padding - barHeight
@@ -96,8 +103,8 @@ class ExerciseBarGraphView @JvmOverloads constructor(
             }
         }
         
-        // Draw max value label
-        canvas.drawText(maxValue.toInt().toString(), leftPadding - 4f * density, padding + 10f * density, labelPaint)
-        canvas.drawText("0", leftPadding - 4f * density, height - padding, labelPaint)
+        // Draw max/min value labels
+        canvas.drawText(maxY.toInt().toString(), leftPadding - 4f * density, padding + 10f * density, labelPaint)
+        canvas.drawText(minY.toInt().toString(), leftPadding - 4f * density, height - padding, labelPaint)
     }
 }
