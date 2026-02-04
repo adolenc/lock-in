@@ -25,6 +25,7 @@ class ExerciseHistoryActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_EXERCISE_NAME = "extra_exercise_name"
+        const val EXTRA_EXERCISE_ID = "extra_exercise_id"
     }
 
     private lateinit var repository: WorkoutRepository
@@ -97,6 +98,63 @@ class ExerciseHistoryActivity : AppCompatActivity() {
                     .show()
             }
             emptyView.visibility = View.GONE
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_exercise_history, menu)
+        
+        // Tint delete icon red
+        val deleteItem = menu.findItem(R.id.action_delete_exercise)
+        deleteItem?.icon?.setTint(android.graphics.Color.parseColor("#CC0000"))
+        
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_delete_exercise -> {
+                showDeleteExerciseConfirmation()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showDeleteExerciseConfirmation() {
+        val exerciseId = intent.getLongExtra(EXTRA_EXERCISE_ID, -1)
+
+        lifecycleScope.launch {
+            val exercise = if (exerciseId != -1L) repository.getExerciseById(exerciseId) else null
+
+            val message = if (exercise != null) {
+                // Try to format day name nicely
+                val dayName = try {
+                    exercise.dayOfWeek.displayName()
+                } catch (e: Exception) {
+                    exercise.dayOfWeek.name
+                }
+                "Delete \"$exerciseName\" from $dayName?"
+            } else {
+                "Delete \"$exerciseName\" from all days?"
+            }
+
+            AlertDialog.Builder(this@ExerciseHistoryActivity)
+                .setTitle(R.string.delete)
+                .setMessage(message)
+                .setPositiveButton(R.string.delete) { _, _ ->
+                    lifecycleScope.launch {
+                        if (exercise != null) {
+                            repository.deleteExercise(exercise)
+                        } else {
+                            val exercises = repository.getExercisesByName(exerciseName)
+                            exercises.forEach { repository.deleteExercise(it) }
+                        }
+                        finish()
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
     }
 

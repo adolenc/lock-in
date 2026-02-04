@@ -58,7 +58,6 @@ class ExerciseListActivity : AppCompatActivity() {
 
         adapter = ExerciseAdapter(
             onStartDrag = { holder -> itemTouchHelper.startDrag(holder) },
-            onDelete = { exercise -> showDeleteConfirmation(exercise) },
             onClick = { exercise -> openExerciseHistory(exercise) },
             onAddExercise = { showAddExerciseDialog() }
         )
@@ -107,20 +106,10 @@ class ExerciseListActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showDeleteConfirmation(exercise: Exercise) {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.delete)
-            .setMessage("Delete \"${exercise.name}\"?")
-            .setPositiveButton(R.string.delete) { _, _ ->
-                viewModel.deleteExercise(exercise)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
     private fun openExerciseHistory(exercise: Exercise) {
         val intent = Intent(this, ExerciseHistoryActivity::class.java)
         intent.putExtra(ExerciseHistoryActivity.EXTRA_EXERCISE_NAME, exercise.name)
+        intent.putExtra(ExerciseHistoryActivity.EXTRA_EXERCISE_ID, exercise.id)
         startActivity(intent)
     }
 }
@@ -170,7 +159,6 @@ private class DragCallback(
 
 private class ExerciseAdapter(
     private val onStartDrag: (RecyclerView.ViewHolder) -> Unit,
-    private val onDelete: (Exercise) -> Unit,
     private val onClick: (Exercise) -> Unit,
     private val onAddExercise: () -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -200,7 +188,6 @@ private class ExerciseAdapter(
     class ExerciseViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val dragHandle: TextView = view.findViewById(R.id.dragHandle)
         val name: TextView = view.findViewById(R.id.exerciseName)
-        val delete: TextView = view.findViewById(R.id.deleteButton)
     }
     
     class FooterViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -230,7 +217,6 @@ private class ExerciseAdapter(
         } else if (holder is ExerciseViewHolder) {
             val exercise = exercises[position]
             holder.name.text = exercise.name
-            holder.delete.setOnClickListener { onDelete(exercise) }
             holder.itemView.setOnClickListener { onClick(exercise) }
             holder.dragHandle.setOnTouchListener { _, event ->
                 if (event.actionMasked == MotionEvent.ACTION_DOWN) {
