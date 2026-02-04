@@ -211,9 +211,11 @@ class StatsActivity : AppCompatActivity() {
 
                         val titleView = android.widget.TextView(this@StatsActivity).apply {
                             text = exerciseName
-                            textSize = 18f
+                            textSize = 14f
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setPadding(0, 16, 0, 8)
+                            gravity = android.view.Gravity.CENTER_HORIZONTAL
+                            setTextColor(android.graphics.Color.parseColor("#767676"))
                         }
                         dayContentLayout.addView(titleView)
                         
