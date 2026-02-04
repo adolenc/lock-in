@@ -72,16 +72,68 @@ class StatsActivity : AppCompatActivity() {
                         dayName
                     }
                     
-                    // Add Section Header for Day
-                    val dayHeader = android.widget.TextView(this@StatsActivity).apply {
-                        text = formattedDayName
-                        textSize = 24f
-                        setTypeface(null, android.graphics.Typeface.BOLD)
-                        setPadding(0, 48, 0, 16)
-                        // Use default text color from theme to support dark mode
-                        // setTextColor(android.graphics.Color.BLACK) 
+                    // Add Section Header for Day (Replicating Recent History style)
+                    val dayHeaderLayout = android.widget.LinearLayout(this@StatsActivity).apply {
+                        orientation = android.widget.LinearLayout.HORIZONTAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                        val padding = (12 * resources.displayMetrics.density).toInt()
+                        setPadding(padding, padding, padding, padding)
+                        
+                        val outValue = android.util.TypedValue()
+                        theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
+                        setBackgroundResource(outValue.resourceId)
                     }
-                    graphsContainer.addView(dayHeader)
+
+                    val dayLabel = android.widget.TextView(this@StatsActivity).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            0,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                            1f
+                        )
+                        text = formattedDayName
+                        textSize = 18f // Slightly larger than history (14sp) as it is a main section
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                        setTextColor(android.graphics.Color.parseColor("#999999"))
+                    }
+                    
+                    val arrowLabel = android.widget.TextView(this@StatsActivity).apply {
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        text = "▼"
+                        textSize = 14f
+                        setTextColor(android.graphics.Color.parseColor("#999999"))
+                    }
+
+                    dayHeaderLayout.addView(dayLabel)
+                    dayHeaderLayout.addView(arrowLabel)
+                    
+                    graphsContainer.addView(dayHeaderLayout)
+
+                    val dayContentLayout = android.widget.LinearLayout(this@StatsActivity).apply {
+                        orientation = android.widget.LinearLayout.VERTICAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(
+                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                        )
+                        visibility = android.view.View.GONE
+                    }
+                    graphsContainer.addView(dayContentLayout)
+
+                    dayHeaderLayout.setOnClickListener {
+                        if (dayContentLayout.visibility == android.view.View.VISIBLE) {
+                            dayContentLayout.visibility = android.view.View.GONE
+                            arrowLabel.text = "▼"
+                        } else {
+                            dayContentLayout.visibility = android.view.View.VISIBLE
+                            arrowLabel.text = "▲"
+                        }
+                    }
 
                     // Group by Exercise within the day and sort by orderIndex
                     val exercisesInDay = dayStats.groupBy { it.exerciseId }
@@ -109,7 +161,7 @@ class StatsActivity : AppCompatActivity() {
                             setTypeface(null, android.graphics.Typeface.BOLD)
                             setPadding(0, 16, 0, 8)
                         }
-                        graphsContainer.addView(titleView)
+                        dayContentLayout.addView(titleView)
                         
                         val barGraph = ExerciseBarGraphView(this@StatsActivity).apply {
                             layoutParams = android.widget.LinearLayout.LayoutParams(
@@ -118,7 +170,7 @@ class StatsActivity : AppCompatActivity() {
                             )
                             setData(dataMap, threeMonthsAgo, java.time.LocalDate.now())
                         }
-                        graphsContainer.addView(barGraph)
+                        dayContentLayout.addView(barGraph)
                     }
                 }
             }
