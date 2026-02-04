@@ -85,6 +85,13 @@ class StatsActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 graphView.setData(statsMap)
                 
+                // Scroll to end (today) after layout
+                graphView.post {
+                     val scrollView = findViewById<HorizontalScrollView>(R.id.statsScrollView)
+                     val targetScrollX = graphView.getInitialScrollX()
+                     scrollView.scrollTo(targetScrollX, 0)
+                }
+                
                 graphsContainer.removeAllViews()
                 
                 // Sort days (MONDAY, TUESDAY...)

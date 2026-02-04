@@ -79,6 +79,13 @@ class MainActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 graphView.setData(statsMap)
+                
+                // Scroll to center on today
+                graphView.post {
+                     val scrollView = findViewById<android.widget.HorizontalScrollView>(R.id.mainGraphScrollView)
+                     val targetScrollX = graphView.getInitialScrollX()
+                     scrollView.scrollTo(targetScrollX, 0)
+                }
             }
         }
     }
