@@ -22,6 +22,39 @@ class StatsActivity : AppCompatActivity() {
         val graphView = findViewById<ContributionGraphView>(R.id.contributionGraph)
         // val scrollView = findViewById<HorizontalScrollView>(R.id.statsScrollView) // View ID still exists but usage might need checking if used for scrolling logic
         val graphsContainer = findViewById<android.widget.LinearLayout>(R.id.graphsContainer)
+        val statsOptionsButton = findViewById<android.widget.ImageButton>(R.id.statsOptionsButton)
+        
+        // List to hold all created graph views so we can update them when switch toggles
+        val allGraphViews = mutableListOf<ExerciseBarGraphView>()
+        // Store current data ranges to re-apply
+        val currentDataRanges = mutableMapOf<ExerciseBarGraphView, Triple<Map<java.time.LocalDate, Float>, java.time.LocalDate, java.time.LocalDate>>()
+        
+        var showMissingDays = true
+
+        statsOptionsButton.setOnClickListener {
+            // Using AlertDialog for a modal window in the center of the screen
+            val popupView = layoutInflater.inflate(R.layout.popup_stats_options, null)
+            val switch = popupView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.showMissingDaysSwitch)
+            switch.isChecked = showMissingDays
+            
+            val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Stats Options")
+                .setView(popupView)
+                .setPositiveButton("Close", null)
+                .create()
+                
+            switch.setOnCheckedChangeListener { _, isChecked ->
+                showMissingDays = isChecked
+                allGraphViews.forEach { graph ->
+                     val ranges = currentDataRanges[graph]
+                     if (ranges != null) {
+                         graph.setData(ranges.first, ranges.second, ranges.third, isChecked)
+                     }
+                }
+            }
+            
+            dialog.show()
+        }
 
         lifecycleScope.launch(Dispatchers.IO) {
             val db = AppDatabase.getDatabase(applicationContext)
@@ -168,8 +201,10 @@ class StatsActivity : AppCompatActivity() {
                                 android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
                                 android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
                             )
-                            setData(dataMap, threeMonthsAgo, java.time.LocalDate.now())
+                            setData(dataMap, threeMonthsAgo, java.time.LocalDate.now(), showMissingDays)
                         }
+                        allGraphViews.add(barGraph)
+                        currentDataRanges[barGraph] = Triple(dataMap, threeMonthsAgo, java.time.LocalDate.now())
                         dayContentLayout.addView(barGraph)
                     }
                 }

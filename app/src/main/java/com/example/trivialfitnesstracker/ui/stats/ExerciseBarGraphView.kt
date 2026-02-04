@@ -38,11 +38,13 @@ class ExerciseBarGraphView @JvmOverloads constructor(
     private var data: Map<LocalDate, Float> = emptyMap()
     private var minDate: LocalDate = LocalDate.now().minusMonths(3)
     private var maxDate: LocalDate = LocalDate.now()
+    private var showMissingDays: Boolean = true
 
-    fun setData(newData: Map<LocalDate, Float>, rangeStart: LocalDate, rangeEnd: LocalDate) {
+    fun setData(newData: Map<LocalDate, Float>, rangeStart: LocalDate, rangeEnd: LocalDate, showMissing: Boolean = true) {
         data = newData
         minDate = rangeStart
         maxDate = rangeEnd
+        showMissingDays = showMissing
         invalidate()
     }
 
@@ -76,20 +78,35 @@ class ExerciseBarGraphView @JvmOverloads constructor(
         canvas.drawLine(leftPadding, height - padding, width - padding, height - padding, axisPaint) // X axis
         canvas.drawLine(leftPadding, padding, leftPadding, height - padding, axisPaint) // Y axis
 
-        val daysCount = (maxDate.toEpochDay() - minDate.toEpochDay()).toInt() + 1
-        if (daysCount <= 0) return
+        val sortedData = data.filter { it.value > 0 }.toSortedMap()
+        
+        val itemsToDraw: List<Pair<LocalDate, Float>>
+        val totalBars: Int
+        
+        if (showMissingDays) {
+            totalBars = (maxDate.toEpochDay() - minDate.toEpochDay()).toInt() + 1
+            if (totalBars <= 0) return
+            
+            // Generate full sequence
+            itemsToDraw = (0 until totalBars).map { i ->
+                val date = minDate.plusDays(i.toLong())
+                date to (data[date] ?: 0f)
+            }
+        } else {
+            // Only days with data
+            if (sortedData.isEmpty()) return
+            totalBars = sortedData.size
+            itemsToDraw = sortedData.map { it.key to it.value }
+        }
 
-        val barWidth = graphWidth / daysCount.toFloat()
+        val barWidth = graphWidth / totalBars.toFloat()
         
         // Draw bars
-        for (i in 0 until daysCount) {
-            val date = minDate.plusDays(i.toLong())
-            val value = data[date] ?: 0f
-            
+        itemsToDraw.forEachIndexed { index, (date, value) ->
             if (value > 0) {
                 val fraction = (value - minY) / yRange
                 val barHeight = fraction * graphHeight
-                val left = leftPadding + i * barWidth
+                val left = leftPadding + index * barWidth
                 val right = left + barWidth - (1f * density)
                 val top = height - padding - barHeight
                 val bottom = height - padding
@@ -98,8 +115,20 @@ class ExerciseBarGraphView @JvmOverloads constructor(
             }
             
             // Draw Month labels on X axis
-            if (date.dayOfMonth == 1) { 
-                 canvas.drawText(date.month.name.take(3), leftPadding + i * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
+            // If showing missing days, stick to 1st of month logic
+            if (showMissingDays) {
+                if (date.dayOfMonth == 1) { 
+                     canvas.drawText(date.month.name.take(3), leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
+                }
+            } else {
+                // If compressed, maybe show date periodically or if space allows?
+                // For now, let's show label if it's the first bar of a new month in the sequence
+                // OR if we have few bars, show all dates?
+                // Simple logic: Show MMM if previous bar was different month
+                val prevDate = if (index > 0) itemsToDraw[index-1].first else null
+                if (prevDate == null || prevDate.month != date.month) {
+                    canvas.drawText(date.month.name.take(3), leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
+                }
             }
         }
         

@@ -42,6 +42,25 @@
             </androidx.cardview.widget.CardView>
 
             <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="8dp"
+                android:gravity="end">
+
+                <ImageButton
+                    android:id="@+id/statsOptionsButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_settings"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
+                    android:contentDescription="Stats Options"/>
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/graphsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
