@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import android.view.MotionEvent
 import java.time.LocalDate
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -36,24 +37,99 @@ class ExerciseBarGraphView @JvmOverloads constructor(
         textAlign = Paint.Align.RIGHT
         isAntiAlias = true
     }
+    private val valuePaint = Paint().apply {
+        color = Color.parseColor("#40C463") // Green, same as bars
+        textSize = 12f * density
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = android.graphics.Typeface.DEFAULT_BOLD
+    }
 
     private var data: Map<LocalDate, Float> = emptyMap()
     private var minDate: LocalDate = LocalDate.now().minusMonths(3)
     private var maxDate: LocalDate = LocalDate.now()
     private var showMissingDays: Boolean = true
+    
+    private var itemsToDraw: List<Pair<LocalDate, Float>> = emptyList()
+    private var selectedIndex: Int = -1
 
     fun setData(newData: Map<LocalDate, Float>, rangeStart: LocalDate, rangeEnd: LocalDate, showMissing: Boolean = true) {
         data = newData
         minDate = rangeStart
         maxDate = rangeEnd
         showMissingDays = showMissing
+        prepareData()
+        selectedIndex = -1
         invalidate()
+    }
+    
+    private fun prepareData() {
+        val sortedData = data.filter { it.value > 0 }.toSortedMap()
+        
+        if (showMissingDays) {
+            val totalBars = (maxDate.toEpochDay() - minDate.toEpochDay()).toInt() + 1
+            if (totalBars <= 0) {
+                itemsToDraw = emptyList()
+                return
+            }
+            
+            // Generate full sequence
+            itemsToDraw = (0 until totalBars).map { i ->
+                val date = minDate.plusDays(i.toLong())
+                date to (data[date] ?: 0f)
+            }
+        } else {
+            // Only days with data
+            if (sortedData.isEmpty()) {
+                itemsToDraw = emptyList()
+                return
+            }
+            itemsToDraw = sortedData.map { it.key to it.value }
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val desiredHeight = (150 * density).toInt() // Fixed height for graph
         setMeasuredDimension(getDefaultSize(suggestedMinimumWidth, widthMeasureSpec), 
             resolveSize(desiredHeight, heightMeasureSpec))
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            val width = width.toFloat()
+            val height = height.toFloat()
+            val padding = 20f * density
+            val leftPadding = 40f * density
+            
+            val graphWidth = width - padding - leftPadding
+            val totalBars = itemsToDraw.size
+            if (totalBars == 0) return false
+            
+            val barWidth = graphWidth / totalBars.toFloat()
+            val x = event.x
+            val y = event.y
+            
+            // Check bounds (roughly)
+            if (x >= leftPadding && x <= width - padding && y >= padding && y <= height - padding) {
+                val index = ((x - leftPadding) / barWidth).toInt()
+                if (index in itemsToDraw.indices) {
+                    if (selectedIndex == index) {
+                        selectedIndex = -1 // Toggle off
+                    } else {
+                        selectedIndex = index
+                    }
+                    performClick()
+                    invalidate()
+                    return true
+                }
+            }
+        }
+        return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -86,27 +162,8 @@ class ExerciseBarGraphView @JvmOverloads constructor(
         canvas.drawLine(leftPadding, height - padding, width - padding, height - padding, axisPaint) // X axis
         canvas.drawLine(leftPadding, padding, leftPadding, height - padding, axisPaint) // Y axis
 
-        val sortedData = data.filter { it.value > 0 }.toSortedMap()
-        
-        val itemsToDraw: List<Pair<LocalDate, Float>>
-        val totalBars: Int
-        
-        if (showMissingDays) {
-            totalBars = (maxDate.toEpochDay() - minDate.toEpochDay()).toInt() + 1
-            if (totalBars <= 0) return
-            
-            // Generate full sequence
-            itemsToDraw = (0 until totalBars).map { i ->
-                val date = minDate.plusDays(i.toLong())
-                date to (data[date] ?: 0f)
-            }
-        } else {
-            // Only days with data
-            if (sortedData.isEmpty()) return
-            totalBars = sortedData.size
-            itemsToDraw = sortedData.map { it.key to it.value }
-        }
-
+        if (itemsToDraw.isEmpty()) return
+        val totalBars = itemsToDraw.size
         val barWidth = graphWidth / totalBars.toFloat()
         
         // Draw bars
@@ -120,6 +177,12 @@ class ExerciseBarGraphView @JvmOverloads constructor(
                 val bottom = height - padding
                 
                 canvas.drawRect(left, top, right, bottom, barPaint)
+                
+                // Draw value if selected
+                if (index == selectedIndex) {
+                    val text = if (value % 1.0f == 0f) value.toInt().toString() else String.format("%.1f", value)
+                    canvas.drawText(text, left + barWidth/2, top - 4f * density, valuePaint)
+                }
             }
             
             // Draw Month labels on X axis
