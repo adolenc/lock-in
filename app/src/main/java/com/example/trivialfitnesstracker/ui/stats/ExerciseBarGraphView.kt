@@ -7,6 +7,8 @@ import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
 import java.time.LocalDate
+import kotlin.math.ceil
+import kotlin.math.floor
 
 class ExerciseBarGraphView @JvmOverloads constructor(
     context: Context,
@@ -70,9 +72,15 @@ class ExerciseBarGraphView @JvmOverloads constructor(
         val actualMin = validValues.minOrNull() ?: 0f
         val actualMax = validValues.maxOrNull() ?: 10f
         
-        val minY = if (actualMin > 0) actualMin * 0.9f else 0f
-        val maxY = if (actualMax > 0) actualMax * 1.1f else 10f
-        val yRange = (maxY - minY).coerceAtLeast(1f) // Ensure non-zero range
+        var minY = floor(if (actualMin > 0) actualMin * 0.9f else 0f)
+        var maxY = ceil(if (actualMax > 0) actualMax * 1.1f else 10f)
+        var yRange = (maxY - minY).coerceAtLeast(1f)
+        
+        // Ensure non-zero range if min equals max
+        if (yRange <= 1f && maxY == minY) {
+             maxY += 1f
+             yRange = 1f
+        }
         
         // Draw axes
         canvas.drawLine(leftPadding, height - padding, width - padding, height - padding, axisPaint) // X axis
