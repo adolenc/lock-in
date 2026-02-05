@@ -49,4 +49,10 @@
     <string name="export_error">Failed to export database</string>
     <string name="import_error">Failed to import database</string>
     <string name="import_warning">This will replace all existing data. Continue?</string>
+    <string name="variation_none">Variation: None</string>
+    <string name="variation_prefix">Variation: %s</string>
+    <string name="select_variation">Select Variation</string>
+    <string name="add_variation">Add new variation</string>
+    <string name="new_variation_hint">New variation name</string>
+    <string name="variation_none_option">None</string>
 </resources>

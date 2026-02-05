@@ -2,6 +2,7 @@ package com.example.trivialfitnesstracker.data
 
 import com.example.trivialfitnesstracker.data.dao.ExerciseDao
 import com.example.trivialfitnesstracker.data.dao.ExerciseLogDao
+import com.example.trivialfitnesstracker.data.dao.ExerciseVariationDao
 import com.example.trivialfitnesstracker.data.dao.SetLogDao
 import com.example.trivialfitnesstracker.data.dao.WorkoutSessionDao
 import com.example.trivialfitnesstracker.data.entity.*
@@ -12,7 +13,8 @@ class WorkoutRepository(
     private val exerciseDao: ExerciseDao,
     private val workoutSessionDao: WorkoutSessionDao,
     private val exerciseLogDao: ExerciseLogDao,
-    private val setLogDao: SetLogDao
+    private val setLogDao: SetLogDao,
+    private val exerciseVariationDao: ExerciseVariationDao
 ) {
     // Exercise operations
     fun getExercisesForDay(day: DayOfWeek) = exerciseDao.getExercisesForDay(day)
@@ -69,7 +71,19 @@ class WorkoutRepository(
     suspend fun updateExerciseNote(exerciseLogId: Long, note: String?) =
         exerciseLogDao.updateNote(exerciseLogId, note)
 
+    suspend fun updateExerciseVariation(exerciseLogId: Long, variationId: Long?) =
+        exerciseLogDao.updateVariation(exerciseLogId, variationId)
+
     suspend fun deleteExerciseLog(log: ExerciseLog) = exerciseLogDao.delete(log)
+    
+    // Variation operations
+    suspend fun getVariationsForExercise(exerciseId: Long) = exerciseVariationDao.getVariationsForExercise(exerciseId)
+    
+    suspend fun getVariationById(id: Long) = exerciseVariationDao.getById(id)
+    
+    suspend fun addVariation(exerciseId: Long, name: String): Long {
+        return exerciseVariationDao.insert(ExerciseVariation(exerciseId = exerciseId, name = name))
+    }
 
     // Set log operations
     suspend fun logSet(exerciseLogId: Long, weight: Float?, reps: Int, isDropdown: Boolean = false): Long {

@@ -22,10 +22,23 @@
             android:paddingStart="16dp"
             android:paddingEnd="120dp"
             android:paddingTop="24dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="4dp"
             android:textSize="28sp"
             android:textStyle="bold"
             tools:text="Bench Press" />
+
+        <!-- Variation Selector -->
+        <TextView
+            android:id="@+id/variationSelector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp"
+            android:textSize="14sp"
+            android:text="Variation: /"
+            android:background="?attr/selectableItemBackground"
+            tools:text="Wide Grip" />
 
         <!-- History section -->
         <LinearLayout

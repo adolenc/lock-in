@@ -93,7 +93,8 @@ class WorkoutActivity : AppCompatActivity() {
             db.exerciseDao(),
             db.workoutSessionDao(),
             db.exerciseLogDao(),
-            db.setLogDao()
+            db.setLogDao(),
+            db.exerciseVariationDao()
         )
         viewModel = ViewModelProvider(this, WorkoutViewModelFactory(repository))
             .get(WorkoutViewModel::class.java)

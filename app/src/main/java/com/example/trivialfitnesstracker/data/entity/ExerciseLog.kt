@@ -19,11 +19,18 @@ import androidx.room.PrimaryKey
             parentColumns = ["id"],
             childColumns = ["exerciseId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = ExerciseVariation::class,
+            parentColumns = ["id"],
+            childColumns = ["variationId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
     indices = [
         Index("sessionId"),
-        Index("exerciseId")
+        Index("exerciseId"),
+        Index("variationId")
     ]
 )
 data class ExerciseLog(
@@ -31,6 +38,7 @@ data class ExerciseLog(
     val id: Long = 0,
     val sessionId: Long,
     val exerciseId: Long,
+    val variationId: Long? = null,
     val completedAt: Long, // epoch millis
     val note: String? = null
 )

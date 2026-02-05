@@ -49,7 +49,8 @@ class ExerciseHistoryActivity : AppCompatActivity() {
             db.exerciseDao(),
             db.workoutSessionDao(),
             db.exerciseLogDao(),
-            db.setLogDao()
+            db.setLogDao(),
+            db.exerciseVariationDao()
         )
 
         recyclerView = findViewById<RecyclerView>(R.id.historyRecyclerView)
@@ -78,10 +79,12 @@ class ExerciseHistoryActivity : AppCompatActivity() {
                 return@launch
             }
 
-            // Load sets for each log
+            // Load sets and variations for each log
+            // We'll fetch variations one by one or bulk. Since we don't have bulk get, one by one is fine for now.
             val historyItems = logs.map { log ->
                 val sets = repository.getSetsForExerciseLog(log.id)
-                HistoryItem(log, sets)
+                val variation = if (log.variationId != null) repository.getVariationById(log.variationId)?.name else null
+                HistoryItem(log, sets, variation)
             }
 
             recyclerView.adapter = HistoryAdapter(historyItems) { log ->
@@ -220,7 +223,8 @@ class ExerciseHistoryActivity : AppCompatActivity() {
 
 private data class HistoryItem(
     val log: ExerciseLog,
-    val sets: List<SetLog>
+    val sets: List<SetLog>,
+    val variationName: String?
 )
 
 private class HistoryAdapter(
@@ -259,7 +263,9 @@ private class HistoryAdapter(
             val reps = regularSets.joinToString(", ") { it.reps.toString() }
             val dropdown = if (dropdownSets.isNotEmpty()) 
                 " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-            holder.setsText.text = "$weight × $reps$dropdown"
+            
+            val variationPrefix = if (!item.variationName.isNullOrEmpty()) "${item.variationName} " else ""
+            holder.setsText.text = "$variationPrefix$weight × $reps$dropdown"
         }
 
         if (!item.log.note.isNullOrEmpty()) {

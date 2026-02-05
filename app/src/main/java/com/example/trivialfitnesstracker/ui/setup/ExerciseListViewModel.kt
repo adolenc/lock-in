@@ -38,8 +38,13 @@ class ExerciseListViewModel(
                         val reps = regularSets.joinToString(", ") { it.reps.toString() }
                         val dropdown = if (dropdownSets.isNotEmpty()) 
                             " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                            
-                        logsMap[exercise.id] = if (weight.isNotEmpty()) "$weight × $reps$dropdown" else "/ × $reps$dropdown"
+                        
+                        val variation = if (lastLog.variationId != null) {
+                            repository.getVariationById(lastLog.variationId)?.name
+                        } else null
+                        val variationPrefix = if (variation != null) "$variation " else ""
+
+                        logsMap[exercise.id] = if (weight.isNotEmpty()) "$variationPrefix$weight × $reps$dropdown" else "$variationPrefix/ × $reps$dropdown"
                     }
                 }
             }

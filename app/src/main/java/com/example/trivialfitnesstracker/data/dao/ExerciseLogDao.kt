@@ -46,6 +46,9 @@ interface ExerciseLogDao {
 
     @Query("UPDATE exercise_logs SET note = :note WHERE id = :id")
     suspend fun updateNote(id: Long, note: String?)
+
+    @Query("UPDATE exercise_logs SET variationId = :variationId WHERE id = :id")
+    suspend fun updateVariation(id: Long, variationId: Long?)
 }
 
 @Dao

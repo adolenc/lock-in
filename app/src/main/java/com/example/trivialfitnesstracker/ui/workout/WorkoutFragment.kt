@@ -46,6 +46,7 @@ class WorkoutFragment : Fragment() {
     private lateinit var noteText: TextView
     private lateinit var addNoteButton: Button
     private lateinit var weightColorIndicator: View
+    private lateinit var variationSelector: TextView
 
     private val weightValues: List<Float?> = listOf(
         null,                    // No weight
@@ -79,7 +80,8 @@ class WorkoutFragment : Fragment() {
             db.exerciseDao(),
             db.workoutSessionDao(),
             db.exerciseLogDao(),
-            db.setLogDao()
+            db.setLogDao(),
+            db.exerciseVariationDao()
         )
 
         viewModel = ViewModelProvider(
@@ -105,6 +107,7 @@ class WorkoutFragment : Fragment() {
         noteText = view.findViewById(R.id.noteText)
         addNoteButton = view.findViewById(R.id.addNoteButton)
         weightColorIndicator = view.findViewById(R.id.weightColorIndicator)
+        variationSelector = view.findViewById(R.id.variationSelector)
     }
 
     private fun setupPickers() {
@@ -156,6 +159,10 @@ class WorkoutFragment : Fragment() {
         noteText.setOnClickListener {
             showNoteDialog()
         }
+
+        variationSelector.setOnClickListener {
+            showVariationDialog()
+        }
     }
 
     private fun setupObservers() {
@@ -163,11 +170,16 @@ class WorkoutFragment : Fragment() {
             exerciseName.text = exercise.name
         }
 
+        viewModel.selectedVariation.observe(viewLifecycleOwner) { variation ->
+            val name = variation?.name ?: "/"
+            variationSelector.text = getString(R.string.variation_prefix, name)
+        }
+
         viewModel.history.observe(viewLifecycleOwner) { historyList ->
             if (historyList.isEmpty()) {
                 historyText.text = getString(R.string.no_history)
             } else {
-                historyText.text = historyList.reversed().joinToString("\n") { h: ExerciseHistory ->
+                historyText.text = historyList.reversed().joinToString("\n") { h: com.example.trivialfitnesstracker.ui.workout.ExerciseHistory ->
                     val regularSets = h.sets.filter { !it.isDropdown }
                     val dropdownSets = h.sets.filter { it.isDropdown }
                     val weightVal = regularSets.firstOrNull()?.weight
@@ -178,7 +190,8 @@ class WorkoutFragment : Fragment() {
                     val dropdown = if (dropdownSets.isNotEmpty()) 
                         " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
                     val note = if (!h.note.isNullOrEmpty()) " (${h.note})" else ""
-                    "${h.date}: $weight × $reps$dropdown$note"
+                    val variation = if (!h.variation.isNullOrEmpty()) "${h.variation} " else ""
+                    "${h.date}: $variation$weight × $reps$dropdown$note"
                 }
             }
         }
@@ -249,6 +262,42 @@ class WorkoutFragment : Fragment() {
             }
         }
         weightColorIndicator.setBackgroundColor(color)
+    }
+
+    private fun showVariationDialog() {
+        val variations = viewModel.variations.value ?: emptyList()
+        val options = mutableListOf<String>()
+        options.add(getString(R.string.variation_none_option))
+        options.addAll(variations.map { it.name })
+        options.add(getString(R.string.add_variation)) // Last option is to add new
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.select_variation)
+            .setItems(options.toTypedArray()) { _, which ->
+                when (which) {
+                    0 -> viewModel.setVariation(null) // None
+                    options.lastIndex -> showAddVariationDialog() // Add new
+                    else -> viewModel.setVariation(variations[which - 1]) // Select existing
+                }
+            }
+            .show()
+    }
+
+    private fun showAddVariationDialog() {
+        val input = EditText(requireContext())
+        input.hint = getString(R.string.new_variation_hint)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.add_variation)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    viewModel.addVariation(name)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showNoteDialog() {

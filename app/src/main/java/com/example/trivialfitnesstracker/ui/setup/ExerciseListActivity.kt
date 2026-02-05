@@ -48,7 +48,8 @@ class ExerciseListActivity : AppCompatActivity() {
             db.exerciseDao(),
             db.workoutSessionDao(),
             db.exerciseLogDao(),
-            db.setLogDao()
+            db.setLogDao(),
+            db.exerciseVariationDao()
         )
         viewModel = ViewModelProvider(this, ExerciseListViewModelFactory(repository, day))
             .get(ExerciseListViewModel::class.java)

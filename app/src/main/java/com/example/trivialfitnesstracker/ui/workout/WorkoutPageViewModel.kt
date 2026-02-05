@@ -8,10 +8,13 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+import com.example.trivialfitnesstracker.data.entity.ExerciseVariation
+
 data class ExerciseHistory(
     val date: String,
     val sets: List<SetLog>,
-    val note: String?
+    val note: String?,
+    val variation: String? = null
 )
 
 class WorkoutPageViewModel(
@@ -22,6 +25,12 @@ class WorkoutPageViewModel(
 
     private val _exercise = MutableLiveData<Exercise>()
     val exercise: LiveData<Exercise> = _exercise
+
+    private val _variations = MutableLiveData<List<ExerciseVariation>>()
+    val variations: LiveData<List<ExerciseVariation>> = _variations
+
+    private val _selectedVariation = MutableLiveData<ExerciseVariation?>()
+    val selectedVariation: LiveData<ExerciseVariation?> = _selectedVariation
 
     private val _history = MutableLiveData<List<ExerciseHistory>>()
     val history: LiveData<List<ExerciseHistory>> = _history
@@ -65,10 +74,39 @@ class WorkoutPageViewModel(
             // Load today's sets
             loadTodaySets()
             
-            // Load note
+            // Load note and variation
             val exerciseLog = repository.getExerciseLogForSession(sessionId, exerciseId)
             _currentNote.value = exerciseLog?.note
+            
+            // Load variations list
+            loadVariations()
+            
+            // Set selected variation from log
+            if (exerciseLog?.variationId != null) {
+                val variation = repository.getVariationById(exerciseLog.variationId)
+                _selectedVariation.value = variation
+            } else {
+                // Auto-select based on most recent history log if not set for current session
+                val recentLogs = repository.getRecentLogsForExercise(exerciseId, 5)
+                val lastLog = recentLogs.firstOrNull { it.sessionId != sessionId }
+                
+                if (lastLog?.variationId != null) {
+                    val variation = repository.getVariationById(lastLog.variationId)
+                    _selectedVariation.value = variation
+                    
+                    if (variation != null) {
+                        setVariation(variation)
+                    }
+                } else {
+                    _selectedVariation.value = null
+                }
+            }
         }
+    }
+
+    private suspend fun loadVariations() {
+        val list = repository.getVariationsForExercise(exerciseId)
+        _variations.value = list
     }
 
     private suspend fun loadHistory() {
@@ -76,10 +114,12 @@ class WorkoutPageViewModel(
         val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
         val historyList = recentLogs.map { log ->
             val sets = repository.getSetsForExerciseLog(log.id)
+            val variation = if (log.variationId != null) repository.getVariationById(log.variationId)?.name else null
             ExerciseHistory(
                 date = dateFormat.format(Date(log.completedAt)),
                 sets = sets,
-                note = log.note
+                note = log.note,
+                variation = variation
             )
         }
         _history.value = historyList
@@ -119,6 +159,25 @@ class WorkoutPageViewModel(
             _canUndo.value = false
             loadTodaySets()
             loadHistory()
+        }
+    }
+
+    fun setVariation(variation: ExerciseVariation?) {
+        viewModelScope.launch {
+            val exerciseLog = repository.getOrCreateExerciseLog(sessionId, exerciseId)
+            repository.updateExerciseVariation(exerciseLog.id, variation?.id)
+            _selectedVariation.value = variation
+        }
+    }
+
+    fun addVariation(name: String) {
+        viewModelScope.launch {
+            val id = repository.addVariation(exerciseId, name)
+            loadVariations() // Refresh list
+            
+            // Automatically select the new variation
+            val newVariation = repository.getVariationById(id)
+            setVariation(newVariation)
         }
     }
 
