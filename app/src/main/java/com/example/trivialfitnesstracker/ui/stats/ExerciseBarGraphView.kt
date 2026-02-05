@@ -189,7 +189,9 @@ class ExerciseBarGraphView @JvmOverloads constructor(
             // If showing missing days, stick to 1st of month logic
             if (showMissingDays) {
                 if (date.dayOfMonth == 1) { 
-                     canvas.drawText(date.month.name.take(3), leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
+                     val monthName = date.month.name.take(3)
+                     val formattedMonth = monthName.first().uppercase() + monthName.drop(1).lowercase()
+                     canvas.drawText(formattedMonth, leftPadding + index * barWidth + barWidth/2, height - padding + 12f * density, textPaint)
                 }
             } else {
                 // If compressed (missing days hidden), hide labels as requested
