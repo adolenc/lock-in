@@ -123,7 +123,7 @@ class WorkoutFragment : Fragment() {
         updateWeightColor(weightValues[weightPicker.value])
 
         repsPicker.minValue = 1
-        repsPicker.maxValue = 50
+        repsPicker.maxValue = 200
         repsPicker.wrapSelectorWheel = false
         repsPicker.value = 10
     }
@@ -212,7 +212,7 @@ class WorkoutFragment : Fragment() {
 
         viewModel.lastReps.observe(viewLifecycleOwner) { reps ->
             if (reps != null) {
-                repsPicker.value = reps.coerceIn(1, 50)
+                repsPicker.value = reps.coerceIn(1, 200)
             }
         }
 
