@@ -207,13 +207,9 @@ class ContributionGraphView @JvmOverloads constructor(
     }
 
     private fun getColorForCount(count: Int): Int {
-        // Inverted brightness: More weight -> Brighter (L1)
         return when {
             count == 0 -> colorEmpty
-            count <= 3 -> colorL4
-            count <= 6 -> colorL3
-            count <= 10 -> colorL2
-            else -> colorL1
+            else -> colorL3
         }
     }
 }
