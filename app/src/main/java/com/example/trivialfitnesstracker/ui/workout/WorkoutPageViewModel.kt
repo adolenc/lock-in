@@ -110,19 +110,23 @@ class WorkoutPageViewModel(
     }
 
     private suspend fun loadHistory() {
-        val recentLogs = repository.getRecentLogsForExercise(exerciseId, 3)
         val dateFormat = SimpleDateFormat("MMM d", Locale.getDefault())
-        val historyList = recentLogs.map { log ->
+        var history: ExerciseHistory? = null
+        val recentLogs = repository.getRecentLogsForExercise(exerciseId, 10)
+        for (log in recentLogs) {
+            if (log.sessionId == sessionId) continue
             val sets = repository.getSetsForExerciseLog(log.id)
+            if (sets.isEmpty()) continue
             val variation = if (log.variationId != null) repository.getVariationById(log.variationId)?.name else null
-            ExerciseHistory(
+            history = ExerciseHistory(
                 date = dateFormat.format(Date(log.completedAt)),
                 sets = sets,
                 note = log.note,
                 variation = variation
             )
+            break
         }
-        _history.value = historyList
+        _history.value = history?.let { listOf(it) } ?: emptyList()
     }
 
     private suspend fun loadTodaySets() {

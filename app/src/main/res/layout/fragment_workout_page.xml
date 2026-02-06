@@ -40,34 +40,6 @@
             android:background="?attr/selectableItemBackground"
             tools:text="Wide Grip" />
 
-        <!-- History section -->
-        <LinearLayout
-            android:id="@+id/historyHeader"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="12dp"
-            android:background="?attr/selectableItemBackground">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/recent_history"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:textColor="#999999" />
-
-            <TextView
-                android:id="@+id/historyArrow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="▼"
-                android:textSize="12sp"
-                android:textColor="#999999" />
-        </LinearLayout>
-
         <TextView
             android:id="@+id/historyText"
             android:layout_width="match_parent"

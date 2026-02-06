@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.NumberPicker
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
@@ -37,8 +36,6 @@ class WorkoutFragment : Fragment() {
     private lateinit var viewModel: WorkoutPageViewModel
     private lateinit var exerciseName: TextView
     private lateinit var historyText: TextView
-    private lateinit var historyHeader: LinearLayout
-    private lateinit var historyArrow: TextView
     private lateinit var weightPicker: NumberPicker
     private lateinit var repsPicker: NumberPicker
     private lateinit var todaySetsText: TextView
@@ -97,8 +94,6 @@ class WorkoutFragment : Fragment() {
 
     private fun bindViews(view: View) {
         exerciseName = view.findViewById(R.id.exerciseName)
-        historyHeader = view.findViewById(R.id.historyHeader)
-        historyArrow = view.findViewById(R.id.historyArrow)
         historyText = view.findViewById(R.id.historyText)
         weightPicker = view.findViewById(R.id.weightPicker)
         repsPicker = view.findViewById(R.id.repsPicker)
@@ -129,12 +124,6 @@ class WorkoutFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        historyHeader.setOnClickListener {
-            val isVisible = historyText.visibility == View.VISIBLE
-            historyText.visibility = if (isVisible) View.GONE else View.VISIBLE
-            historyArrow.text = if (isVisible) "▼" else "▲"
-        }
-
         view?.findViewById<Button>(R.id.logSetButton)?.setOnClickListener {
             val weight = weightValues[weightPicker.value]
             val reps = repsPicker.value
@@ -176,23 +165,23 @@ class WorkoutFragment : Fragment() {
         }
 
         viewModel.history.observe(viewLifecycleOwner) { historyList ->
-            if (historyList.isEmpty()) {
-                historyText.text = getString(R.string.no_history)
+            val lastHistory = historyList.firstOrNull()
+            if (lastHistory == null) {
+                historyText.text = ""
+                historyText.visibility = View.GONE
             } else {
-                historyText.text = historyList.reversed().joinToString("\n") { h: com.example.trivialfitnesstracker.ui.workout.ExerciseHistory ->
-                    val regularSets = h.sets.filter { !it.isDropdown }
-                    val dropdownSets = h.sets.filter { it.isDropdown }
-                    val weightVal = regularSets.firstOrNull()?.weight
-                    val weight = weightVal?.let {
-                        if (it == it.toInt().toFloat()) "${it.toInt()}kg" else "${it}kg"
-                    } ?: "/"
-                    val reps = regularSets.joinToString(", ") { it.reps.toString() }
-                    val dropdown = if (dropdownSets.isNotEmpty()) 
-                        " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                    val note = if (!h.note.isNullOrEmpty()) " (${h.note})" else ""
-                    val variation = if (!h.variation.isNullOrEmpty()) "${h.variation} " else ""
-                    "${h.date}: $variation$weight × $reps$dropdown$note"
-                }
+                val regularSets = lastHistory.sets.filter { !it.isDropdown }
+                val dropdownSets = lastHistory.sets.filter { it.isDropdown }
+                val weightVal = regularSets.firstOrNull()?.weight
+                val weight = weightVal?.let {
+                    if (it == it.toInt().toFloat()) "${it.toInt()}kg" else "${it}kg"
+                } ?: "/"
+                val reps = regularSets.joinToString(", ") { it.reps.toString() }
+                val dropdown = if (dropdownSets.isNotEmpty())
+                    " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
+                val variation = if (!lastHistory.variation.isNullOrEmpty()) "${lastHistory.variation} " else ""
+                historyText.text = "$variation$weight × $reps$dropdown"
+                historyText.visibility = View.VISIBLE
             }
         }
 

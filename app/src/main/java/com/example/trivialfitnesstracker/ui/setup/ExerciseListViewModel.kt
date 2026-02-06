@@ -26,26 +26,25 @@ class ExerciseListViewModel(
         viewModelScope.launch {
             val logsMap = mutableMapOf<Long, String>()
             exerciseList.forEach { exercise ->
-                val logs = repository.getRecentLogsForExercise(exercise.id, 1)
-                if (logs.isNotEmpty()) {
-                    val lastLog = logs.first()
-                    val sets = repository.getSetsForExerciseLog(lastLog.id)
-                    if (sets.isNotEmpty()) {
-                        val regularSets = sets.filter { !it.isDropdown }
-                        val dropdownSets = sets.filter { it.isDropdown }
-                        
-                        val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: ""
-                        val reps = regularSets.joinToString(", ") { it.reps.toString() }
-                        val dropdown = if (dropdownSets.isNotEmpty()) 
-                            " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
-                        
-                        val variation = if (lastLog.variationId != null) {
-                            repository.getVariationById(lastLog.variationId)?.name
-                        } else null
-                        val variationPrefix = if (variation != null) "$variation " else ""
+                val logs = repository.getRecentLogsForExercise(exercise.id, 10)
+                for (log in logs) {
+                    val sets = repository.getSetsForExerciseLog(log.id)
+                    if (sets.isEmpty()) continue
+                    val regularSets = sets.filter { !it.isDropdown }
+                    val dropdownSets = sets.filter { it.isDropdown }
+                    
+                    val weight = regularSets.firstOrNull()?.weight?.let { "${it.toInt()}kg" } ?: ""
+                    val reps = regularSets.joinToString(", ") { it.reps.toString() }
+                    val dropdown = if (dropdownSets.isNotEmpty())
+                        " + ${dropdownSets.joinToString(", ") { it.reps.toString() }}" else ""
+                    
+                    val variation = if (log.variationId != null) {
+                        repository.getVariationById(log.variationId)?.name
+                    } else null
+                    val variationPrefix = if (variation != null) "$variation " else ""
 
-                        logsMap[exercise.id] = if (weight.isNotEmpty()) "$variationPrefix$weight × $reps$dropdown" else "$variationPrefix/ × $reps$dropdown"
-                    }
+                    logsMap[exercise.id] = if (weight.isNotEmpty()) "$variationPrefix$weight × $reps$dropdown" else "$variationPrefix/ × $reps$dropdown"
+                    break
                 }
             }
             _lastLogs.postValue(logsMap)
