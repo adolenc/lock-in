@@ -48,12 +48,12 @@ class ExerciseBarGraphView @JvmOverloads constructor(
     private var data: Map<LocalDate, Float> = emptyMap()
     private var minDate: LocalDate = LocalDate.now().minusMonths(3)
     private var maxDate: LocalDate = LocalDate.now()
-    private var showMissingDays: Boolean = true
+    private var showMissingDays: Boolean = false
     
     private var itemsToDraw: List<Pair<LocalDate, Float>> = emptyList()
     private var selectedIndex: Int = -1
 
-    fun setData(newData: Map<LocalDate, Float>, rangeStart: LocalDate, rangeEnd: LocalDate, showMissing: Boolean = true) {
+    fun setData(newData: Map<LocalDate, Float>, rangeStart: LocalDate, rangeEnd: LocalDate, showMissing: Boolean = false) {
         data = newData
         minDate = rangeStart
         maxDate = rangeEnd

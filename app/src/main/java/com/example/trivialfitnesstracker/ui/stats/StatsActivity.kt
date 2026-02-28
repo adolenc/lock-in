@@ -29,7 +29,7 @@ class StatsActivity : AppCompatActivity() {
         // Store only the raw data for each graph, not the derived ranges
         val graphData = mutableMapOf<ExerciseBarGraphView, Map<java.time.LocalDate, Float>>()
         
-        var showMissingDays = true
+        var showMissingDays = false
         var showAllHistory = false // false = last 3 months, true = all history
 
         statsOptionsButton.setOnClickListener {
