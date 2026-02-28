@@ -17,7 +17,9 @@ class WorkoutViewModel(
 
     private var sessionId: Long = 0
     private var currentDay: DayOfWeek? = null
-    private var exercises: List<Exercise> = emptyList()
+    private var dayExercises: List<Exercise> = emptyList()
+    private var extraExercises: List<Exercise> = emptyList()
+    private val exercises: List<Exercise> get() = dayExercises + extraExercises
 
     private val _exerciseStatuses = MutableLiveData<List<ExerciseStatus>>()
     val exerciseStatuses: LiveData<List<ExerciseStatus>> = _exerciseStatuses
@@ -39,7 +41,7 @@ class WorkoutViewModel(
 
     fun startWorkout(day: DayOfWeek) {
         viewModelScope.launch {
-            exercises = repository.getExercisesForDaySync(day)
+            dayExercises = repository.getExercisesForDaySync(day)
             if (exercises.isEmpty()) {
                 _exercisesList.value = exercises
                 _isFinished.value = true
@@ -53,9 +55,12 @@ class WorkoutViewModel(
         }
     }
 
-    fun resumeWorkout(day: DayOfWeek, savedSessionId: Long, savedIndex: Int) {
+    fun resumeWorkout(day: DayOfWeek, savedSessionId: Long, savedIndex: Int, extraExerciseIds: List<Long> = emptyList()) {
         viewModelScope.launch {
-            exercises = repository.getExercisesForDaySync(day)
+            dayExercises = repository.getExercisesForDaySync(day)
+            if (extraExerciseIds.isNotEmpty()) {
+                extraExercises = repository.getExercisesByIds(extraExerciseIds)
+            }
             if (exercises.isEmpty()) {
                 _exercisesList.value = exercises
                 _isFinished.value = true
@@ -93,6 +98,31 @@ class WorkoutViewModel(
 
     fun goToExercise(index: Int) {
         // Obsolete
+    }
+
+    fun addExercises(newExercises: List<Exercise>) {
+        val existingIds = exercises.map { it.id }.toSet()
+        val toAdd = newExercises.filter { it.id !in existingIds }
+        if (toAdd.isEmpty()) return
+        val insertPosition = exercises.size
+        extraExercises = extraExercises + toAdd
+        _exercisesList.value = exercises
+        _currentIndex.value = insertPosition
+        updateExerciseStatuses()
+    }
+
+    suspend fun getExercisesFromOtherDays(): List<Exercise> {
+        val day = currentDay ?: return emptyList()
+        return repository.getExercisesExcludingDay(day)
+    }
+
+    fun getExtraExerciseIds(): List<Long> = extraExercises.map { it.id }
+
+    suspend fun createAndAddExercise(name: String) {
+        val day = currentDay ?: return
+        val exerciseId = repository.addExercise(name, day)
+        val exercise = repository.getExerciseById(exerciseId) ?: return
+        addExercises(listOf(exercise))
     }
 }
 

@@ -55,4 +55,9 @@
     <string name="add_variation">Add new variation</string>
     <string name="new_variation_hint">New variation name</string>
     <string name="variation_none_option">None</string>
+    <string name="add_exercises_to_workout">Add Exercises</string>
+    <string name="add_exercises_short">+ Add</string>
+    <string name="add_button">Add</string>
+    <string name="no_other_exercises">No other exercises available</string>
+    <string name="create_new_exercise">Create new exercise</string>
 </resources>

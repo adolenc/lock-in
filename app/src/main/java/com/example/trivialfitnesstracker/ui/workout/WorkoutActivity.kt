@@ -26,6 +26,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.trivialfitnesstracker.R
@@ -34,6 +35,7 @@ import com.example.trivialfitnesstracker.data.WorkoutRepository
 import com.example.trivialfitnesstracker.data.entity.DayOfWeek
 import com.example.trivialfitnesstracker.data.entity.Exercise
 import com.example.trivialfitnesstracker.ui.settings.SettingsActivity
+import kotlinx.coroutines.launch
 
 class WorkoutActivity : AppCompatActivity() {
 
@@ -47,6 +49,7 @@ class WorkoutActivity : AppCompatActivity() {
         private const val CHANNEL_ID = "rest_timer"
         private const val NOTIFICATION_ID = 1
         private const val PERMISSION_REQUEST_CODE = 100
+        private const val KEY_EXTRA_EXERCISES = "extra_exercise_ids"
     }
 
     private lateinit var viewModel: WorkoutViewModel
@@ -110,7 +113,8 @@ class WorkoutActivity : AppCompatActivity() {
         val dayExtra = intent.getStringExtra(EXTRA_DAY)
         
         if (savedSessionId != -1L && savedDay != null) {
-            viewModel.resumeWorkout(DayOfWeek.valueOf(savedDay), savedSessionId, savedIndex)
+            val extraIds = loadExtraExerciseIds()
+            viewModel.resumeWorkout(DayOfWeek.valueOf(savedDay), savedSessionId, savedIndex, extraIds)
         } else if (dayExtra != null) {
             viewModel.startWorkout(DayOfWeek.valueOf(dayExtra))
         } else {
@@ -131,6 +135,7 @@ class WorkoutActivity : AppCompatActivity() {
             .putLong(KEY_SESSION_ID, sessionId)
             .putString(KEY_DAY, day.name)
             .putInt(KEY_EXERCISE_INDEX, exerciseIndex)
+            .putString(KEY_EXTRA_EXERCISES, viewModel.getExtraExerciseIds().joinToString(","))
             .apply()
     }
 
@@ -195,8 +200,11 @@ class WorkoutActivity : AppCompatActivity() {
         val count = viewPager.adapter?.itemCount ?: 0
         prevButton.isEnabled = index > 0
         prevButton.alpha = if (index > 0) 1f else 0.5f
-        nextButton.isEnabled = index < count - 1
-        nextButton.alpha = if (index < count - 1) 1f else 0.5f
+
+        val isLast = index >= count - 1
+        nextButton.text = if (isLast) getString(R.string.add_exercises_short) else getString(R.string.next)
+        nextButton.isEnabled = true
+        nextButton.alpha = 1f
         
         viewModel.getSessionInfo()?.let { (sessionId, day) ->
             saveWorkoutState(sessionId, day, index)
@@ -219,7 +227,11 @@ class WorkoutActivity : AppCompatActivity() {
         nextButton.setOnClickListener {
             val current = viewPager.currentItem
             val count = viewPager.adapter?.itemCount ?: 0
-            if (current < count - 1) viewPager.currentItem = current + 1
+            if (current < count - 1) {
+                viewPager.currentItem = current + 1
+            } else {
+                showAddExerciseDialog()
+            }
         }
 
         finishWorkoutButton.setOnClickListener {
@@ -364,6 +376,67 @@ class WorkoutActivity : AppCompatActivity() {
         }
     }
     
+    private fun showAddExerciseDialog() {
+        lifecycleScope.launch {
+            val otherExercises = viewModel.getExercisesFromOtherDays()
+            val currentIds = viewModel.exercisesList.value?.map { it.id }?.toSet() ?: emptySet()
+            val available = otherExercises.filter { it.id !in currentIds }
+
+            val labels = available.map { "${it.name} (${it.dayOfWeek.displayName()})" }
+            val allLabels = (labels + getString(R.string.create_new_exercise)).toTypedArray()
+            val allSelected = BooleanArray(allLabels.size)
+
+            AlertDialog.Builder(this@WorkoutActivity)
+                .setTitle(R.string.add_exercises_to_workout)
+                .setMultiChoiceItems(allLabels, allSelected) { _, which, isChecked ->
+                    allSelected[which] = isChecked
+                }
+                .setPositiveButton(R.string.add_button) { _, _ ->
+                    val selectedExercises = available.filterIndexed { index, _ -> allSelected[index] }
+                    if (selectedExercises.isNotEmpty()) {
+                        viewModel.addExercises(selectedExercises)
+                        viewModel.getSessionInfo()?.let { (sessionId, day) ->
+                            saveWorkoutState(sessionId, day, viewModel.getCurrentIndex())
+                        }
+                    }
+                    if (allSelected.last()) {
+                        showCreateExerciseDialog()
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun showCreateExerciseDialog() {
+        val input = android.widget.EditText(this)
+        input.hint = getString(R.string.exercise_name)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.create_new_exercise)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = input.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        viewModel.createAndAddExercise(name)
+                        viewModel.getSessionInfo()?.let { (sessionId, day) ->
+                            saveWorkoutState(sessionId, day, viewModel.getCurrentIndex())
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun loadExtraExerciseIds(): List<Long> {
+        return prefs.getString(KEY_EXTRA_EXERCISES, "")
+            ?.split(",")
+            ?.mapNotNull { it.toLongOrNull() }
+            ?: emptyList()
+    }
+
     private fun showFinishConfirmation() {
         AlertDialog.Builder(this)
         .setTitle(R.string.finish_workout)

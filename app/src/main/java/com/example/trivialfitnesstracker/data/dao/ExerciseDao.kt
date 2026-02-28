@@ -33,4 +33,10 @@ interface ExerciseDao {
 
     @Query("UPDATE exercises SET orderIndex = :newIndex WHERE id = :id")
     suspend fun updateOrderIndex(id: Long, newIndex: Int)
+
+    @Query("SELECT * FROM exercises WHERE dayOfWeek != :day ORDER BY dayOfWeek, orderIndex ASC")
+    suspend fun getExercisesExcludingDay(day: DayOfWeek): List<Exercise>
+
+    @Query("SELECT * FROM exercises WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<Long>): List<Exercise>
 }

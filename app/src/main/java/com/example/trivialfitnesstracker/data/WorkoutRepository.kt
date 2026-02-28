@@ -25,6 +25,10 @@ class WorkoutRepository(
 
     suspend fun getExercisesByName(name: String) = exerciseDao.getByName(name)
 
+    suspend fun getExercisesExcludingDay(day: DayOfWeek) = exerciseDao.getExercisesExcludingDay(day)
+
+    suspend fun getExercisesByIds(ids: List<Long>) = exerciseDao.getByIds(ids)
+
     suspend fun addExercise(name: String, day: DayOfWeek): Long {
         val maxIndex = exerciseDao.getMaxOrderIndex(day) ?: -1
         return exerciseDao.insert(Exercise(name = name, dayOfWeek = day, orderIndex = maxIndex + 1))
